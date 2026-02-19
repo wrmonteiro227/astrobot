@@ -115,7 +115,7 @@
             const painelChat = document.getElementById('chat-messages');
             painelChat.innerHTML = `
                 <div class="message bot">
-                    Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou pergunte: "O que tenho para fazer hoje?" 🚀
+                    Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou pergunte: "O que eu tenho para fazer hoje?" 🚀
                 </div>
             `;
         });
@@ -140,7 +140,7 @@
             return data.getTime();
         }
 
-        // 5. O SUPER CÉREBRO DO ASTRO (Agora Mestre em Tarefas e Finanças)
+        // 5. O SUPER CÉREBRO DO ASTRO (Corrigido para entender o "eu")
         function analisarTexto(texto) {
             let textoMin = texto.toLowerCase();
 
@@ -152,13 +152,10 @@
                 return { categoria: 'consulta', tipo: 'gastos', periodo: periodo };
             }
 
-            // B. É CONSULTA DE TAREFAS? (Diferencia "O que tenho pra fazer" de "Tenho que fazer")
-            let ehConsultaTarefas = textoMin.includes('o que tenho para fazer') || 
-                                    textoMin.includes('oque tenho para fazer') ||
-                                    textoMin.includes('oque tenho pra fazer') ||
-                                    textoMin.includes('o que tenho pra fazer') ||
-                                    textoMin.includes('quais tarefas') ||
-                                    textoMin.includes('minhas tarefas');
+            // B. É CONSULTA DE TAREFAS? (Inteligência flexível)
+            // Se tiver (o que, oque, quais) + (fazer, tarefa) = É PERGUNTA!
+            let ehConsultaTarefas = (textoMin.includes('o que') || textoMin.includes('oque') || textoMin.includes('quais')) && 
+                                    (textoMin.includes('fazer') || textoMin.includes('tarefa'));
 
             if (ehConsultaTarefas) {
                 let periodo = 'hoje';
@@ -172,8 +169,6 @@
             // C. É REGISTRO? 
             let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
             
-            // Trava de inteligência: Só é finança se tiver NÚMERO e alguma palavra de dinheiro.
-            // Isso impede que "Ir ao médico às 15h" seja salvo como gasto.
             let palavrasDinheiro = ['gastei', 'comprei', 'paguei', 'custou', 'recebi', 'ganhei', 'vendi', 'entrou', 'reais', 'com'];
             let temPalavraDinheiro = palavrasDinheiro.some(palavra => textoMin.includes(palavra));
 
@@ -185,7 +180,7 @@
                 return { categoria: 'financa', tipo: 'saida', valor: valor };
             }
 
-            // Se não for pergunta e não tiver regra de finança, é REGISTRO DE TAREFA!
+            // Se não caiu em nenhuma das regras de cima, é REGISTRO DE TAREFA.
             return { categoria: 'tarefa' };
         }
 
@@ -219,7 +214,7 @@
                             setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
                         }
 
-                    // --- CONSULTA DE TAREFAS (COM FILTRO DE TEMPO) ---
+                    // --- CONSULTA DE TAREFAS ---
                     } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
                         // Puxa as tarefas do banco
                         const { data, error } = await meuSupabase.from('tarefas').select('*').eq('cliente_id', idUsuario).eq('status', analise.status);
@@ -228,7 +223,7 @@
                         const timestampFiltro = obterDataFiltro(analise.periodo);
                         let periodoStr = analise.periodo === 'mes' ? 'deste mês' : (analise.periodo === 'semana' ? 'desta semana' : 'de hoje');
 
-                        // Filtra as tarefas pelo tempo, igual fazemos com os gastos
+                        // Filtra as tarefas pelo tempo
                         let tarefasValidas = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
 
                         setTimeout(() => {
@@ -295,6 +290,7 @@
     </script>
 </body>
 </html>
+
 
 
 
