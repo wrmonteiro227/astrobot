@@ -148,17 +148,20 @@
     </div>
 
     <script>
-        // Configuração do Supabase
         const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         const meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
 
         async function fazerLogin() {
-            const telefoneInput = document.getElementById('telefone').value.trim();
+            const telefoneRaw = document.getElementById('telefone').value.trim();
+            
+            // FILTRO MÁGICO: Limpa o que o usuário digitou antes de procurar no banco
+            const telefoneLimpo = telefoneRaw.replace(/\D/g, ''); 
+
             const divErro = document.getElementById('mensagem-erro');
             const btnLogin = document.querySelector('.btn-login');
 
-            if (telefoneInput === '') {
+            if (telefoneLimpo === '') {
                 divErro.textContent = "Por favor, digite seu número.";
                 divErro.style.display = 'block';
                 return;
@@ -168,12 +171,12 @@
             divErro.style.display = 'none';
 
             try {
-                // Vai no Supabase e procura o cliente com esse telefone
+                // Procura no banco usando apenas os números
                 const { data, error } = await meuSupabase
                     .from('clientes')
                     .select('*')
-                    .eq('telefone', telefoneInput)
-                    .single(); // Espera achar apenas 1 resultado
+                    .eq('telefone', telefoneLimpo)
+                    .single(); 
 
                 if (error || !data) {
                     throw new Error("Cliente não encontrado.");
@@ -186,9 +189,8 @@
                     return;
                 }
 
-                // SUCESSO! Salva os dados do cliente no navegador e redireciona
                 localStorage.setItem('astro_usuario_logado', JSON.stringify(data));
-                window.location.href = 'chat.html'; // Manda para a tela do chat
+                window.location.href = 'chat.html'; 
 
             } catch (err) {
                 console.error(err);
@@ -199,4 +201,5 @@
         }
     </script>
 </body>
+
 </html>
