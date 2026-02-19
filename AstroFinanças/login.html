@@ -6,111 +6,90 @@
     <title>Astro | Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { width: 100%; max-width: 400px; padding: 40px 30px; background: #111827; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        
-        h1 { font-size: 28px; margin-bottom: 10px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        p { color: #9CA3AF; font-size: 15px; margin-bottom: 30px; }
-
+        .container { width: 100%; max-width: 400px; padding: 30px; background: #111827; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .logo-img { width: 70px; height: 70px; border-radius: 50%; margin-bottom: 15px; border: 2px solid #8B5CF6; }
         .input-group { margin-bottom: 20px; text-align: left; }
-        .input-group label { display: block; font-size: 14px; color: #9CA3AF; margin-bottom: 8px; margin-left: 5px; }
-        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 16px; transition: 0.3s; }
-        .input-group input:focus { border-color: #3B82F6; background: rgba(255,255,255,0.08); }
-
-        .btn-login { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; font-size: 16px; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-login:hover { opacity: 0.9; transform: translateY(-2px); }
-        .btn-login:disabled { background: #374151; cursor: not-allowed; transform: none; }
-
-        .footer-links { margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.05); pt: 20px; }
-        .footer-links a { color: #9CA3AF; text-decoration: none; font-size: 14px; display: block; margin-top: 15px; transition: 0.2s; }
-        .footer-links a span { color: #3B82F6; font-weight: 600; }
-        .footer-links a:hover { color: #FFFFFF; }
-
-        #msg-erro { color: #EF4444; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; display: none; }
+        .input-group label { display: block; font-size: 14px; color: #9CA3AF; margin-bottom: 8px; }
+        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; width: 100%; }
+        .btn-login { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; }
+        #msg-erro { color: #EF4444; font-size: 14px; margin-bottom: 15px; display: none; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h1>Astro Bot</h1>
-        <p>Bem-vindo de volta!</p>
-
+        <img src="https://files.catbox.moe/p862f1.png" class="logo-img" alt="Logo">
+        <h2>Entrar no Astro</h2>
+        <p style="color: #9CA3AF; font-size: 14px; margin-bottom: 25px;">Digite seu WhatsApp cadastrado</p>
+        
         <div id="msg-erro"></div>
 
         <div class="input-group">
-            <label>Seu WhatsApp (Com DDD)</label>
-            <input type="text" id="tel_login" placeholder="Ex: 21999999999" maxlength="11">
+            <input type="text" id="tel_login" placeholder="Ex: 21999999999">
         </div>
 
-        <button class="btn-login" id="btn-entrar" onclick="realizarLogin()">Entrar no Sistema</button>
-
-        <div class="footer-links">
-            <a href="registro.html">Ainda não tem conta? <span>Cadastre-se aqui</span></a>
-        </div>
+        <button class="btn-login" id="btn-entrar" onclick="realizarLogin()">Acessar Painel</button>
+        
+        <a href="registro.html" style="color: #3B82F6; display: block; margin-top: 20px; text-decoration: none; font-size: 14px;">Não tem conta? <b>Cadastre-se</b></a>
     </div>
 
     <script>
-    const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-    const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-    const supa = window.supabase.createClient(S_URL, S_KEY);
+        const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+        const supa = window.supabase.createClient(S_URL, S_KEY);
 
-    async function logar() {
-        const tel = document.getElementById('tel_login').value.replace(/\D/g, '');
-        const btn = document.getElementById('btn-entrar');
-        const erro = document.getElementById('msg-erro');
+        // NOME DA FUNÇÃO: realizarLogin
+        async function realizarLogin() {
+            const telInput = document.getElementById('tel_login').value.replace(/\D/g, '');
+            const btn = document.getElementById('btn-entrar');
+            const erro = document.getElementById('msg-erro');
 
-        if (tel.length < 10) {
-            erro.innerText = "Digite um número válido.";
-            erro.style.display = "block";
-            return;
-        }
+            if (telInput.length < 10) {
+                erro.innerText = "Digite um número válido.";
+                erro.style.display = "block";
+                return;
+            }
 
-        btn.disabled = true;
-        btn.innerText = "Verificando...";
-        erro.style.display = "none";
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
+            erro.style.display = "none";
 
-        try {
-            // Buscamos sem o .single() para evitar erros de duplicidade
-            const { data, error } = await supa
-                .from('clientes')
-                .select('*')
-                .eq('telefone', tel);
+            try {
+                const { data, error } = await supa
+                    .from('clientes')
+                    .select('*')
+                    .eq('telefone', telInput);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            if (data && data.length > 0) {
-                const usuario = data[0]; // Pegamos o primeiro registro encontrado
+                if (data && data.length > 0) {
+                    const usuario = data[0];
 
-                if (usuario.assinatura_ativa === true) {
-                    // SUCESSO!
-                    localStorage.setItem('user_telefone', tel);
-                    console.log("Login autorizado para:", tel);
-                    window.location.href = 'chat.html'; // Certifique-se que o nome do arquivo é chat.html
+                    if (usuario.assinatura_ativa === true) {
+                        localStorage.setItem('user_telefone', telInput);
+                        window.location.href = 'chat.html'; 
+                    } else {
+                        erro.innerText = "Assinatura pendente no sistema.";
+                        erro.style.display = "block";
+                        btn.disabled = false;
+                        btn.innerText = "Acessar Painel";
+                    }
                 } else {
-                    erro.innerText = "Assinatura pendente. Redirecionando para pagamento...";
+                    erro.innerText = "Número não encontrado.";
                     erro.style.display = "block";
-                    setTimeout(() => { window.location.href = 'registro.html'; }, 2000);
+                    btn.disabled = false;
+                    btn.innerText = "Acessar Painel";
                 }
-            } else {
-                erro.innerText = "Número não cadastrado.";
+            } catch (e) {
+                console.error(e);
+                erro.innerText = "Erro na conexão. Tente novamente.";
                 erro.style.display = "block";
                 btn.disabled = false;
                 btn.innerText = "Acessar Painel";
             }
-        } catch (e) {
-            console.error("Erro no login:", e);
-            erro.innerText = "Erro ao conectar. Tente novamente.";
-            erro.style.display = "block";
-            btn.disabled = false;
-            btn.innerText = "Acessar Painel";
         }
-    }
-</script>
+    </script>
 </body>
 </html>
-
-
-
