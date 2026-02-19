@@ -15,8 +15,6 @@
         .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 16px; }
         .btn-login { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; font-size: 16px; }
         #msg-erro { color: #EF4444; font-size: 14px; margin-bottom: 15px; display: none; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; }
-        .link-reg { color: #9CA3AF; text-decoration: none; font-size: 14px; display: block; margin-top: 20px; }
-        .link-reg span { color: #3B82F6; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -28,64 +26,49 @@
         
         <div id="msg-erro"></div>
 
-        <form onsubmit="realizarLogin(event)">
+        <form onsubmit="realizarLogin(event); return false;">
             <div class="input-group">
                 <input type="text" id="tel_login" placeholder="Ex: 21999999999" required>
             </div>
-
             <button type="submit" class="btn-login" id="btn-entrar">Acessar Painel</button>
         </form>
         
-        <a href="registro.html" class="link-reg">Não tem conta? <span>Cadastre-se</span></a>
+        <a href="registro.html" style="color: #9CA3AF; text-decoration: none; font-size: 14px; display: block; margin-top: 20px;">Não tem conta? <span style="color: #3B82F6;">Cadastre-se</span></a>
     </div>
 
     <script>
-        // CONFIGURAÇÕES SUPABASE
         const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         const supa = window.supabase.createClient(S_URL, S_KEY);
 
-        async function realizarLogin(event) {
-            // BLOQUEIO TOTAL DE REFRESH
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
+        async function realizarLogin(e) {
+            if (e) e.preventDefault();
 
             const input = document.getElementById('tel_login');
             const tel = input.value.replace(/\D/g, '');
             const btn = document.getElementById('btn-entrar');
             const erro = document.getElementById('msg-erro');
 
-            if (tel.length < 10) {
-                erro.innerText = "Número incompleto.";
-                erro.style.display = "block";
-                return;
-            }
-
             btn.disabled = true;
-            btn.innerText = "Validando...";
+            btn.innerText = "Verificando...";
             erro.style.display = "none";
 
             try {
-                // BUSCA NO BANCO
-                const { data, error } = await supa
-                    .from('clientes')
-                    .select('*')
-                    .eq('telefone', tel);
+                const { data, error } = await supa.from('clientes').select('*').eq('telefone', tel);
 
                 if (error) throw error;
 
                 if (data && data.length > 0) {
                     const user = data[0];
+                    
+                    // AJUSTE PARA ACEITAR TRUE, true OU "true"
+                    const estaAtivo = String(user.assinatura_ativa).toLowerCase() === 'true';
 
-                    if (user.assinatura_ativa === true) {
-                        // SUCESSO - SALVA E REDIRECIONA
+                    if (estaAtivo) {
                         localStorage.setItem('user_telefone', tel);
-                        console.log("Login OK!");
-                        window.location.href = 'chat.html'; 
+                        window.location.href = 'chat.html';
                     } else {
-                        erro.innerText = "Assinatura pendente no sistema.";
+                        erro.innerText = "Assinatura pendente.";
                         erro.style.display = "block";
                         btn.disabled = false;
                         btn.innerText = "Acessar Painel";
@@ -96,15 +79,11 @@
                     btn.disabled = false;
                     btn.innerText = "Acessar Painel";
                 }
-            } catch (e) {
-                console.error("Erro Supabase:", e);
-                erro.innerText = "Erro ao conectar ao banco.";
+            } catch (err) {
+                erro.innerText = "Erro na conexão.";
                 erro.style.display = "block";
                 btn.disabled = false;
-                btn.innerText = "Acessar Painel";
             }
-            
-            return false; // Garantia extra contra refresh
         }
     </script>
 </body>
