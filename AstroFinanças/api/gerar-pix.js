@@ -1,49 +1,37 @@
 export default async function handler(req, res) {
-    // 1. Só aceita requisição POST
-    if (req.method !== 'POST') {
-        return res.status(405).json({ erro: 'Método não permitido' });
-    }
+    if (req.method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
+
+    const { nome, tel, cpf } = req.body;
+
+    // Coloque suas credenciais reais da DivPag aqui:
+    const CLIENT_ID = 'SEU_CLIENT_ID_AQUI'; 
+    const CLIENT_SECRET = 'SUA_SECRET_KEY_AQUI';
 
     try {
-        // 2. Recebe os dados do seu arquivo registro.html
-        const { nome, cpf, telefone } = req.body;
+        const params = new URLSearchParams();
+        params.append('client_id', CLIENT_ID);
+        params.append('client_secret', CLIENT_SECRET);
+        params.append('nome', nome);
+        params.append('cpf', cpf);
+        params.append('valor', '29.90');
+        params.append('descricao', 'Assinatura Astro');
+        // Este link avisa ao Webhook quem pagou:
+        params.append('urlnoty', `https://astrobot-ebon.vercel.app/api/webhook?telefone=${tel}`);
 
-        // 3. Suas credenciais seguras e escondidas no servidor
-        const clientId = 'wrmonteiro_9698775123'; // 🔴 COLOQUE SEU ID AQUI
-        const clientSecret = '05a6360e459d7cf2e28ba68e0abd94296826a1fe3c7273c5443bcc9bacc6f70c'; // 🔴 COLOQUE SUA CHAVE AQUI
-
-        const divpagUrl = 'https://divpag.com/v3/pix/qrcode';
-
-        // 4. Monta o pacote de dados para enviar à DivPag
-        const dadosDivPag = new URLSearchParams();
-        dadosDivPag.append('client_id', clientId);
-        dadosDivPag.append('client_secret', clientSecret);
-        dadosDivPag.append('nome', nome);
-        dadosDivPag.append('cpf', cpf);
-        dadosDivPag.append('valor', '29.90'); // PREÇO DA ASSINATURA
-        dadosDivPag.append('descricao', 'Assinatura Mensal Astro');
-        
-        // Manda o telefone do cliente escondido no link pro Webhook saber quem pagou!
-        dadosDivPag.append('urlnoty', `https://astrobot-ebon.vercel.app/api/webhook?telefone=${telefone}`);
-
-        // 5. A Vercel conversa com a DivPag (Sem erro de CORS!)
-        const respostaPix = await fetch(divpagUrl, {
+        const resposta = await fetch('https://divpag.com/v3/pix/qrcode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: dadosDivPag
+            body: params
         });
 
-        const pixJson = await respostaPix.json();
+        const data = await resposta.json();
 
-        // 6. Devolve o QRCode para a tela do usuário
-        if (pixJson.qrcode) {
-            return res.status(200).json({ qrcode: pixJson.qrcode });
+        if (data.qrcode) {
+            return res.status(200).json({ qrcode: data.qrcode });
         } else {
-            return res.status(400).json({ erro: pixJson.message || 'Erro na DivPag' });
+            return res.status(400).json({ erro: data.message || 'Erro na DivPag' });
         }
-
-    } catch (erro) {
-        console.error("Erro ao gerar PIX:", erro);
+    } catch (error) {
         return res.status(500).json({ erro: 'Erro interno no servidor' });
     }
 }
