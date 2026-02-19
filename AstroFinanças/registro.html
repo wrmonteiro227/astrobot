@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Astro | Criar Conta</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -15,7 +17,13 @@
         .input-group label { display: block; font-size: 14px; color: #9CA3AF; margin-bottom: 8px; }
         .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; width: 100%; }
         .btn-register { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; margin-top: 10px; }
+        
         #area-pix { display: none; margin-top: 20px; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 15px; border: 1px solid #10B981; }
+        
+        /* ESTILO DO QUADRADINHO DO QR CODE */
+        #qrcode-imagem { background: white; padding: 10px; display: inline-block; border-radius: 10px; margin: 15px 0; }
+        #qrcode-imagem img { display: block; margin: 0 auto; }
+        
         textarea { width: 100%; height: 80px; background: #000; color: #10B981; padding: 10px; border-radius: 8px; font-size: 11px; margin-bottom: 10px; resize: none; border: 1px solid #10B981; }
     </style>
 </head>
@@ -45,18 +53,17 @@
 
         <div id="area-pix">
             <h3 style="color: #10B981;">PIX Gerado!</h3>
-            <p style="font-size: 13px; margin: 10px 0;">Copie o código e pague no seu banco:</p>
+            
+            <div id="qrcode-imagem"></div> <p style="font-size: 13px; margin-bottom: 10px;">Escaneie o código ou copie abaixo:</p>
             <textarea id="copia-cola" readonly></textarea>
             <button class="btn-register" onclick="copiar()">📋 Copiar Código PIX</button>
-            <a href="login.html" style="display: block; margin-top: 15px; color: #9CA3AF; font-size: 12px;">Já paguei! Ir para o login</a>
+            <a href="login.html" style="display: block; margin-top: 15px; color: #9CA3AF; font-size: 12px; text-decoration: none;">Já paguei! Ir para o login</a>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO ---
         const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        
+        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmFneWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         const clientSupa = window.supabase.createClient(S_URL, S_KEY);
 
         async function cadastrar() {
@@ -67,7 +74,7 @@
             const erro = document.getElementById('msg-erro');
 
             if(!nome || !tel || !cpf || cpf.length < 11) {
-                erro.innerText = "Preencha todos os campos corretamente!";
+                erro.innerText = "Preencha tudo corretamente!";
                 erro.style.display = "block";
                 return;
             }
@@ -77,18 +84,11 @@
             erro.style.display = "none";
 
             try {
-                // 1. Tentar salvar no Supabase
-                const { error: errorSupa } = await clientSupa
-                    .from('clientes')
-                    .insert([{ nome: nome, telefone: tel, assinatura_ativa: false }]);
+                // 1. Salva no Supabase
+                const { error: errorSupa } = await clientSupa.from('clientes').insert([{ nome, telefone: tel, assinatura_ativa: false }]);
+                if (errorSupa && errorSupa.code !== '23505') throw new Error(errorSupa.message);
 
-                // Se o erro for 401, a chave API está errada
-                if (errorSupa) {
-                    if (errorSupa.status === 401) throw new Error("Erro de autenticação no banco. Verifique a API Key.");
-                    if (errorSupa.code !== '23505') throw new Error(errorSupa.message);
-                }
-
-                // 2. Chamar a sua API da Vercel para o PIX
+                // 2. Chama a API para gerar o PIX
                 const response = await fetch('/api/gerar-pix', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -101,13 +101,20 @@
                     document.getElementById('form-registro').style.display = "none";
                     document.getElementById('area-pix').style.display = "block";
                     document.getElementById('copia-cola').value = data.qrcode;
-                } else {
-                    throw new Error(data.erro || "Erro ao gerar o QR Code.");
-                }
 
+                    // PASSO 3: DESENHA O QR CODE NA TELA
+                    document.getElementById('qrcode-imagem').innerHTML = ""; // Limpa antes
+                    new QRCode(document.getElementById("qrcode-imagem"), {
+                        text: data.qrcode,
+                        width: 180,
+                        height: 180
+                    });
+
+                } else {
+                    throw new Error(data.erro || "Erro ao gerar PIX");
+                }
             } catch (e) {
-                console.error("Erro no cadastro:", e);
-                erro.innerText = "Erro: " + e.message;
+                erro.innerText = e.message;
                 erro.style.display = "block";
                 btn.disabled = false;
                 btn.innerText = "Gerar PIX de Acesso";
@@ -118,9 +125,8 @@
             const text = document.getElementById('copia-cola');
             text.select();
             document.execCommand('copy');
-            alert("Código PIX copiado!");
+            alert("Código Copiado!");
         }
     </script>
 </body>
 </html>
-
