@@ -115,7 +115,7 @@
             const painelChat = document.getElementById('chat-messages');
             painelChat.innerHTML = `
                 <div class="message bot">
-                    Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou pergunte: "O que eu tenho para fazer hoje?" 🚀
+                    Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou diga "limpar" para apagar seu histórico. 🚀
                 </div>
             `;
         });
@@ -140,11 +140,10 @@
             return data.getTime();
         }
 
-        // 5. O SUPER CÉREBRO DO ASTRO (Corrigido para entender o "eu")
+        // 5. O SUPER CÉREBRO DO ASTRO
         function analisarTexto(texto) {
             let textoMin = texto.toLowerCase();
 
-            // A. É CONSULTA DE GASTOS?
             if (textoMin.includes('quanto') || textoMin.includes('extrato') || textoMin.includes('gastos') || textoMin.includes('resumo')) {
                 let periodo = 'hoje';
                 if (textoMin.includes('semana')) periodo = 'semana';
@@ -152,8 +151,6 @@
                 return { categoria: 'consulta', tipo: 'gastos', periodo: periodo };
             }
 
-            // B. É CONSULTA DE TAREFAS? (Inteligência flexível)
-            // Se tiver (o que, oque, quais) + (fazer, tarefa) = É PERGUNTA!
             let ehConsultaTarefas = (textoMin.includes('o que') || textoMin.includes('oque') || textoMin.includes('quais')) && 
                                     (textoMin.includes('fazer') || textoMin.includes('tarefa'));
 
@@ -161,14 +158,11 @@
                 let periodo = 'hoje';
                 if (textoMin.includes('semana')) periodo = 'semana';
                 if (textoMin.includes('mês') || textoMin.includes('mes')) periodo = 'mes';
-                
                 let status = textoMin.includes('fiz') || textoMin.includes('concluíd') ? 'concluida' : 'pendente';
                 return { categoria: 'consulta', tipo: 'tarefas', status: status, periodo: periodo };
             }
 
-            // C. É REGISTRO? 
             let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
-            
             let palavrasDinheiro = ['gastei', 'comprei', 'paguei', 'custou', 'recebi', 'ganhei', 'vendi', 'entrou', 'reais', 'com'];
             let temPalavraDinheiro = palavrasDinheiro.some(palavra => textoMin.includes(palavra));
 
@@ -180,9 +174,11 @@
                 return { categoria: 'financa', tipo: 'saida', valor: valor };
             }
 
-            // Se não caiu em nenhuma das regras de cima, é REGISTRO DE TAREFA.
             return { categoria: 'tarefa' };
         }
+
+        // VARIÁVEL DE ESTADO: Diz se o Astro está esperando a confirmação para deletar
+        let aguardandoLimpeza = false;
 
         async function enviarMensagem() {
             const messageInput = document.getElementById('message-input');
@@ -193,10 +189,51 @@
                 messageInput.value = '';
                 if (!meuSupabase) return;
 
-                const analise = analisarTexto(texto);
+                // Tira pontos e vírgulas para não dar erro se você falar "limpar." no microfone
+                let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // --- CONSULTA DE GASTOS ---
+                    // --- SISTEMA DE LIMPEZA (CLEAR ALL) ---
+                    
+                    // Se o Astro já perguntou o que você quer limpar, ele vai rodar este bloco:
+                    if (aguardandoLimpeza) {
+                        if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
+                            // Deleta todas as finanças deste usuário
+                            const { error } = await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
+                            aguardandoLimpeza = false; // Destrava o Astro
+                            setTimeout(() => adicionarMensagem(error ? `⚠️ Erro: ${error.message}` : `🗑️ Histórico de finanças apagado com sucesso, ${nomeUsuario}!`, 'bot'), 800);
+                            return;
+
+                        } else if (textoTratado.includes('tarefa')) {
+                            // Deleta todas as tarefas deste usuário
+                            const { error } = await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
+                            aguardandoLimpeza = false; // Destrava o Astro
+                            setTimeout(() => adicionarMensagem(error ? `⚠️ Erro: ${error.message}` : `🗑️ Histórico de tarefas apagado com sucesso, ${nomeUsuario}!`, 'bot'), 800);
+                            return;
+
+                        } else if (textoTratado.includes('cancelar') || textoTratado.includes('não') || textoTratado.includes('nada')) {
+                            aguardandoLimpeza = false; // Cancela e destrava
+                            setTimeout(() => adicionarMensagem(`Ufa! Operação cancelada. Seus dados estão a salvo. O que deseja fazer agora?`, 'bot'), 800);
+                            return;
+
+                        } else {
+                            // Se responder algo que não faz sentido
+                            setTimeout(() => adicionarMensagem(`Não entendi. Por favor, responda apenas com "finanças", "tarefas" ou "cancelar".`, 'bot'), 800);
+                            return;
+                        }
+                    }
+
+                    // Se você disser a palavra mágica para iniciar a limpeza
+                    if (textoTratado === 'limpar' || textoTratado === 'apagar tudo' || textoTratado === 'limpar histórico') {
+                        aguardandoLimpeza = true; // Trava o cérebro normal do Astro
+                        setTimeout(() => adicionarMensagem(`⚠️ CUIDADO: Você ativou a limpeza de dados!\n\nO que você deseja limpar?\nResponda com:\n- "Finanças"\n- "Tarefas"\n- "Cancelar" (Para sair)`, 'bot'), 800);
+                        return;
+                    }
+
+                    // --- CONTINUAÇÃO NORMAL (Se não estiver no modo limpeza) ---
+                    const analise = analisarTexto(texto);
+
+                    // CONSULTA DE GASTOS
                     if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
                         const { data, error } = await meuSupabase.from('financas').select('*').eq('cliente_id', idUsuario).eq('tipo', 'saida');
                         if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro do Supabase: ${error.message}`, 'bot'), 800); return; }
@@ -214,16 +251,14 @@
                             setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
                         }
 
-                    // --- CONSULTA DE TAREFAS ---
+                    // CONSULTA DE TAREFAS
                     } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
-                        // Puxa as tarefas do banco
                         const { data, error } = await meuSupabase.from('tarefas').select('*').eq('cliente_id', idUsuario).eq('status', analise.status);
                         if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'), 800); return; }
 
                         const timestampFiltro = obterDataFiltro(analise.periodo);
                         let periodoStr = analise.periodo === 'mes' ? 'deste mês' : (analise.periodo === 'semana' ? 'desta semana' : 'de hoje');
 
-                        // Filtra as tarefas pelo tempo
                         let tarefasValidas = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
 
                         setTimeout(() => {
@@ -235,7 +270,7 @@
                             }
                         }, 800);
                     
-                    // --- CADASTRO NOVO (Gastos) ---
+                    // CADASTRO DE FINANÇAS
                     } else if (analise.categoria === 'financa') {
                         const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
                         setTimeout(() => { 
@@ -243,7 +278,7 @@
                             else adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei R$ ${analise.valor.toFixed(2)}.`, 'bot'); 
                         }, 800);
                         
-                    // --- CADASTRO NOVO (Tarefas) ---
+                    // CADASTRO DE TAREFAS
                     } else {
                         const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: 'pendente' }]);
                         setTimeout(() => { 
@@ -290,6 +325,7 @@
     </script>
 </body>
 </html>
+
 
 
 
