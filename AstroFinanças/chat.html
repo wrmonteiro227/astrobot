@@ -115,7 +115,7 @@
             const painelChat = document.getElementById('chat-messages');
             painelChat.innerHTML = `
                 <div class="message bot">
-                    Olá, ${nomeUsuario}! Diga-me uma tarefa, um gasto com valor (ex: "300 com heineken"), ou pergunte: "Quanto gastei hoje?" 🚀
+                    Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou pergunte: "O que tenho para fazer hoje?" 🚀
                 </div>
             `;
         });
@@ -137,14 +137,14 @@
             if (periodo === 'hoje') { data.setHours(0,0,0,0); } 
             else if (periodo === 'semana') { const dia = data.getDay(); data.setDate(data.getDate() - dia); data.setHours(0,0,0,0); } 
             else if (periodo === 'mes') { data.setDate(1); data.setHours(0,0,0,0); }
-            return data.getTime(); // Trabalha com milissegundos para evitar erros
+            return data.getTime();
         }
 
-        // 5. O SUPER CÉREBRO DO ASTRO (BLINDADO)
+        // 5. O SUPER CÉREBRO DO ASTRO (Agora Mestre em Tarefas e Finanças)
         function analisarTexto(texto) {
             let textoMin = texto.toLowerCase();
 
-            // A. É PERGUNTA/CONSULTA? (Se tiver essas palavras, é pesquisa!)
+            // A. É CONSULTA DE GASTOS?
             if (textoMin.includes('quanto') || textoMin.includes('extrato') || textoMin.includes('gastos') || textoMin.includes('resumo')) {
                 let periodo = 'hoje';
                 if (textoMin.includes('semana')) periodo = 'semana';
@@ -152,16 +152,32 @@
                 return { categoria: 'consulta', tipo: 'gastos', periodo: periodo };
             }
 
-            if ((textoMin.includes('quais') || textoMin.includes('minhas')) && (textoMin.includes('tarefa') || textoMin.includes('fazer'))) {
+            // B. É CONSULTA DE TAREFAS? (Diferencia "O que tenho pra fazer" de "Tenho que fazer")
+            let ehConsultaTarefas = textoMin.includes('o que tenho para fazer') || 
+                                    textoMin.includes('oque tenho para fazer') ||
+                                    textoMin.includes('oque tenho pra fazer') ||
+                                    textoMin.includes('o que tenho pra fazer') ||
+                                    textoMin.includes('quais tarefas') ||
+                                    textoMin.includes('minhas tarefas');
+
+            if (ehConsultaTarefas) {
+                let periodo = 'hoje';
+                if (textoMin.includes('semana')) periodo = 'semana';
+                if (textoMin.includes('mês') || textoMin.includes('mes')) periodo = 'mes';
+                
                 let status = textoMin.includes('fiz') || textoMin.includes('concluíd') ? 'concluida' : 'pendente';
-                return { categoria: 'consulta', tipo: 'tarefas', status: status };
+                return { categoria: 'consulta', tipo: 'tarefas', status: status, periodo: periodo };
             }
 
-            // B. É REGISTRO? (Procura OBRIGATORIAMENTE um número na frase)
+            // C. É REGISTRO? 
             let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
             
-            // Só vira Finança se tiver NÚMERO! Isso resolve o bug do R$ 0.00.
-            if (numeroEncontrado) {
+            // Trava de inteligência: Só é finança se tiver NÚMERO e alguma palavra de dinheiro.
+            // Isso impede que "Ir ao médico às 15h" seja salvo como gasto.
+            let palavrasDinheiro = ['gastei', 'comprei', 'paguei', 'custou', 'recebi', 'ganhei', 'vendi', 'entrou', 'reais', 'com'];
+            let temPalavraDinheiro = palavrasDinheiro.some(palavra => textoMin.includes(palavra));
+
+            if (numeroEncontrado && temPalavraDinheiro) {
                 let valor = parseFloat(numeroEncontrado[0].replace(',', '.'));
                 if (textoMin.includes('recebi') || textoMin.includes('ganhei') || textoMin.includes('vendi') || textoMin.includes('entrou')) {
                     return { categoria: 'financa', tipo: 'entrada', valor: valor };
@@ -169,7 +185,7 @@
                 return { categoria: 'financa', tipo: 'saida', valor: valor };
             }
 
-            // Se não for pergunta e não tiver número, é uma tarefa normal
+            // Se não for pergunta e não tiver regra de finança, é REGISTRO DE TAREFA!
             return { categoria: 'tarefa' };
         }
 
@@ -187,57 +203,46 @@
                 try {
                     // --- CONSULTA DE GASTOS ---
                     if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
-                        
-                        // PUXA TUDO SEM FILTRO DE DATA NO SUPABASE (Fim do Erro 400!)
-                        const { data, error } = await meuSupabase
-                            .from('financas')
-                            .select('*') 
-                            .eq('cliente_id', idUsuario)
-                            .eq('tipo', 'saida');
-
-                        if (error) {
-                            setTimeout(() => adicionarMensagem(`⚠️ Erro do Supabase: ${error.message}`, 'bot'), 800);
-                            return;
-                        }
+                        const { data, error } = await meuSupabase.from('financas').select('*').eq('cliente_id', idUsuario).eq('tipo', 'saida');
+                        if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro do Supabase: ${error.message}`, 'bot'), 800); return; }
 
                         const timestampFiltro = obterDataFiltro(analise.periodo);
                         let periodoStr = analise.periodo === 'mes' ? 'este mês' : (analise.periodo === 'semana' ? 'esta semana' : 'hoje');
 
-                        // Filtra com a nossa própria inteligência JavaScript
-                        let gastosValidos = [];
-                        if (data) {
-                            gastosValidos = data.filter(item => {
-                                if (!item.created_at) return true; // Se não tiver data salva, mostra
-                                return new Date(item.created_at).getTime() >= timestampFiltro;
-                            });
-                        }
+                        let gastosValidos = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
 
                         if (gastosValidos.length > 0) {
                             let total = 0; let extrato = '';
                             gastosValidos.forEach(item => { total += item.valor; extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao || 'gasto'}\n`; });
                             setTimeout(() => adicionarMensagem(`Olá ${nomeUsuario}, você gastou ${periodoStr}:\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)} gastos ${periodoStr}!`, 'bot'), 800);
                         } else {
-                            setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉 (Mas no seu banco tem ${data.length} gastos antigos).`, 'bot'), 800);
+                            setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
                         }
 
-                    // --- CONSULTA DE TAREFAS ---
+                    // --- CONSULTA DE TAREFAS (COM FILTRO DE TEMPO) ---
                     } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
-                        const { data, error } = await meuSupabase.from('tarefas').select('descricao').eq('cliente_id', idUsuario).eq('status', analise.status);
+                        // Puxa as tarefas do banco
+                        const { data, error } = await meuSupabase.from('tarefas').select('*').eq('cliente_id', idUsuario).eq('status', analise.status);
+                        if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'), 800); return; }
+
+                        const timestampFiltro = obterDataFiltro(analise.periodo);
+                        let periodoStr = analise.periodo === 'mes' ? 'deste mês' : (analise.periodo === 'semana' ? 'desta semana' : 'de hoje');
+
+                        // Filtra as tarefas pelo tempo, igual fazemos com os gastos
+                        let tarefasValidas = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
 
                         setTimeout(() => {
-                            if (data && data.length > 0) {
-                                let lista = data.map(t => `• ${t.descricao}`).join('\n');
-                                adicionarMensagem((analise.status === 'pendente' ? '📋 Suas tarefas:\n' : '✅ Concluídas:\n') + lista, 'bot');
+                            if (tarefasValidas.length > 0) {
+                                let lista = tarefasValidas.map(t => `• ${t.descricao}`).join('\n');
+                                adicionarMensagem((analise.status === 'pendente' ? `📋 Suas tarefas ${periodoStr}:\n` : `✅ Concluídas ${periodoStr}:\n`) + lista, 'bot');
                             } else {
-                                adicionarMensagem(`Nenhuma tarefa encontrada.`, 'bot');
+                                adicionarMensagem(`Você não tem tarefas ${analise.status === 'pendente' ? 'pendentes' : 'concluídas'} ${periodoStr}, ${nomeUsuario}! 🏖️`, 'bot');
                             }
                         }, 800);
                     
                     // --- CADASTRO NOVO (Gastos) ---
                     } else if (analise.categoria === 'financa') {
-                        const { error } = await meuSupabase.from('financas').insert([{ 
-                            cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor 
-                        }]);
+                        const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
                         setTimeout(() => { 
                             if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
                             else adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei R$ ${analise.valor.toFixed(2)}.`, 'bot'); 
@@ -245,9 +250,7 @@
                         
                     // --- CADASTRO NOVO (Tarefas) ---
                     } else {
-                        const { error } = await meuSupabase.from('tarefas').insert([{ 
-                            cliente_id: idUsuario, descricao: texto, status: 'pendente' 
-                        }]);
+                        const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: 'pendente' }]);
                         setTimeout(() => { 
                             if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
                             else adicionarMensagem(`Anotado, ${nomeUsuario}! ✅ Guardei na sua lista de tarefas.`, 'bot'); 
@@ -292,5 +295,6 @@
     </script>
 </body>
 </html>
+
 
 
