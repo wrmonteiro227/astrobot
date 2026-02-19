@@ -1,0 +1,235 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro | Criar Conta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: #0B0F19;
+            color: #FFFFFF;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 850px;
+            background: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .bot-avatar {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            border-radius: 25px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+            transform: rotate(-5deg);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+            .bot-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        p {
+            font-size: 14px;
+            color: #9CA3AF;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .input-group {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+            .input-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-size: 14px;
+                color: #E5E7EB;
+            }
+
+        .input-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+            .input-field:focus {
+                border-color: #8B5CF6;
+            }
+
+        .btn-register {
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 18px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+            .btn-register:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+            }
+
+        .login-link {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #9CA3AF;
+            text-align: center;
+        }
+
+            .login-link a {
+                color: #8B5CF6;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+                .login-link a:hover {
+                    text-decoration: underline;
+                }
+
+        #mensagem-erro {
+            color: #EF4444;
+            font-size: 14px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="bot-avatar">
+            <img src="https://files.catbox.moe/p862f1.png" alt="Logo Astro">
+        </div>
+
+        <h1>Crie sua conta</h1>
+        <p>Preencha os dados abaixo para ativar o Astro.</p>
+
+        <div class="input-group">
+            <label for="nome">Seu Nome</label>
+            <input type="text" id="nome" class="input-field" placeholder="Como quer ser chamado?">
+        </div>
+
+        <div class="input-group">
+            <label for="telefone">Seu WhatsApp (com DDD)</label>
+            <input type="tel" id="telefone" class="input-field" placeholder="Ex: 21999999999">
+        </div>
+
+        <button class="btn-register" onclick="criarConta()">Ativar e Começar</button>
+
+        <div id="mensagem-erro">Erro ao criar conta. Tente novamente.</div>
+
+        <div class="login-link">
+            Já tem uma assinatura? <a href="login.html">Faça login aqui</a>
+        </div>
+    </div>
+
+    <script>
+        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+        const meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
+
+        async function criarConta() {
+            const nomeInput = document.getElementById('nome').value.trim();
+            const telefoneInput = document.getElementById('telefone').value.trim();
+            const divErro = document.getElementById('mensagem-erro');
+            const btnRegister = document.querySelector('.btn-register');
+
+            if (nomeInput === '' || telefoneInput === '') {
+                divErro.textContent = "Por favor, preencha todos os campos.";
+                divErro.style.display = 'block';
+                return;
+            }
+
+            btnRegister.textContent = "Gerando seu pagamento...";
+            divErro.style.display = 'none';
+
+            try {
+                // 1. Cria a conta no banco como INATIVA (false)
+                const { data, error } = await meuSupabase
+                    .from('clientes')
+                    .insert([{
+                        nome: nomeInput,
+                        telefone: telefoneInput,
+                        assinatura_ativa: false // AQUI ESTÁ A TRAVA DE SEGURANÇA!
+                    }])
+                    .select()
+                    .single();
+
+                if (error) {
+                    if (error.code === '23505') {
+                        throw new Error("Esse telefone já está cadastrado. Faça login.");
+                    }
+                    throw error;
+                }
+
+                // 2. Salva temporariamente os dados no navegador
+                localStorage.setItem('astro_usuario_logado', JSON.stringify(data));
+
+                // 3. REDIRECIONA PARA A DIVPAG (CHECKOUT)
+                // Substitua esse link pelo link real de cobrança do seu produto na DivPag
+                const linkDivPag = 'https://link-do-seu-checkout-aqui.com';
+
+                window.location.href = linkDivPag;
+
+            } catch (err) {
+                console.error(err);
+                divErro.textContent = err.message || "Erro ao criar conta. Verifique os dados.";
+                divErro.style.display = 'block';
+                btnRegister.textContent = "Ativar e Começar";
+            }
+        }
+    </script>
+</body>
+</html>
