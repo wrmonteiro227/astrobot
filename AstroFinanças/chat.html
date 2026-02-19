@@ -177,7 +177,6 @@
             return { categoria: 'tarefa' };
         }
 
-        // VARIÁVEL DE ESTADO: Diz se o Astro está esperando a confirmação para deletar
         let aguardandoLimpeza = false;
 
         async function enviarMensagem() {
@@ -189,51 +188,43 @@
                 messageInput.value = '';
                 if (!meuSupabase) return;
 
-                // Tira pontos e vírgulas para não dar erro se você falar "limpar." no microfone
                 let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // --- SISTEMA DE LIMPEZA (CLEAR ALL) ---
+                    // --- SISTEMA DE LIMPEZA (CLEAR ALL) COM CONFIRMAÇÃO OBRIGATÓRIA ---
                     
-                    // Se o Astro já perguntou o que você quer limpar, ele vai rodar este bloco:
+                    // PASSO 2: O Astro está aguardando a resposta do usuário
                     if (aguardandoLimpeza) {
                         if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
-                            // Deleta todas as finanças deste usuário
                             const { error } = await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
-                            aguardandoLimpeza = false; // Destrava o Astro
+                            aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(error ? `⚠️ Erro: ${error.message}` : `🗑️ Histórico de finanças apagado com sucesso, ${nomeUsuario}!`, 'bot'), 800);
                             return;
-
                         } else if (textoTratado.includes('tarefa')) {
-                            // Deleta todas as tarefas deste usuário
                             const { error } = await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
-                            aguardandoLimpeza = false; // Destrava o Astro
+                            aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(error ? `⚠️ Erro: ${error.message}` : `🗑️ Histórico de tarefas apagado com sucesso, ${nomeUsuario}!`, 'bot'), 800);
                             return;
-
                         } else if (textoTratado.includes('cancelar') || textoTratado.includes('não') || textoTratado.includes('nada')) {
-                            aguardandoLimpeza = false; // Cancela e destrava
-                            setTimeout(() => adicionarMensagem(`Ufa! Operação cancelada. Seus dados estão a salvo. O que deseja fazer agora?`, 'bot'), 800);
+                            aguardandoLimpeza = false;
+                            setTimeout(() => adicionarMensagem(`Ufa! Operação cancelada. Seus dados estão a salvo.`, 'bot'), 800);
                             return;
-
                         } else {
-                            // Se responder algo que não faz sentido
                             setTimeout(() => adicionarMensagem(`Não entendi. Por favor, responda apenas com "finanças", "tarefas" ou "cancelar".`, 'bot'), 800);
                             return;
                         }
                     }
 
-                    // Se você disser a palavra mágica para iniciar a limpeza
-                    if (textoTratado === 'limpar' || textoTratado === 'apagar tudo' || textoTratado === 'limpar histórico') {
-                        aguardandoLimpeza = true; // Trava o cérebro normal do Astro
+                    // PASSO 1: O usuário ativou a palavra-chave de perigo
+                    if (textoTratado.includes('limpar') || textoTratado.includes('apagar')) {
+                        aguardandoLimpeza = true; // Trava o cérebro
                         setTimeout(() => adicionarMensagem(`⚠️ CUIDADO: Você ativou a limpeza de dados!\n\nO que você deseja limpar?\nResponda com:\n- "Finanças"\n- "Tarefas"\n- "Cancelar" (Para sair)`, 'bot'), 800);
                         return;
                     }
 
-                    // --- CONTINUAÇÃO NORMAL (Se não estiver no modo limpeza) ---
+                    // --- CONTINUAÇÃO NORMAL (Se não estiver limpando nada) ---
                     const analise = analisarTexto(texto);
 
-                    // CONSULTA DE GASTOS
                     if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
                         const { data, error } = await meuSupabase.from('financas').select('*').eq('cliente_id', idUsuario).eq('tipo', 'saida');
                         if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro do Supabase: ${error.message}`, 'bot'), 800); return; }
@@ -251,7 +242,6 @@
                             setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
                         }
 
-                    // CONSULTA DE TAREFAS
                     } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
                         const { data, error } = await meuSupabase.from('tarefas').select('*').eq('cliente_id', idUsuario).eq('status', analise.status);
                         if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'), 800); return; }
@@ -270,7 +260,6 @@
                             }
                         }, 800);
                     
-                    // CADASTRO DE FINANÇAS
                     } else if (analise.categoria === 'financa') {
                         const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
                         setTimeout(() => { 
@@ -278,7 +267,6 @@
                             else adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei R$ ${analise.valor.toFixed(2)}.`, 'bot'); 
                         }, 800);
                         
-                    // CADASTRO DE TAREFAS
                     } else {
                         const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: 'pendente' }]);
                         setTimeout(() => { 
@@ -325,6 +313,7 @@
     </script>
 </body>
 </html>
+
 
 
 
