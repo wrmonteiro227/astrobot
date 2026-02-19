@@ -9,12 +9,19 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { width: 100%; max-width: 400px; padding: 30px; background: #111827; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .container { width: 100%; max-width: 400px; padding: 30px; background: #111827; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .logo-img { width: 70px; height: 70px; border-radius: 50%; margin-bottom: 15px; border: 2px solid #8B5CF6; object-fit: cover; }
+        h2 { margin-bottom: 5px; background: linear-gradient(135deg, #FFF, #9CA3AF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { color: #9CA3AF; font-size: 14px; margin-bottom: 25px; }
         .input-group { margin-bottom: 20px; }
-        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 16px; text-align: center; }
+        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 16px; text-align: center; transition: 0.3s; }
+        .input-group input:focus { border-color: #3B82F6; background: rgba(255,255,255,0.08); }
         .btn-login { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        #msg-erro { color: #EF4444; font-size: 14px; margin-bottom: 15px; display: none; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; }
+        .btn-login:hover { transform: translateY(-2px); opacity: 0.9; }
+        .btn-login:disabled { opacity: 0.5; cursor: not-allowed; }
+        #msg-erro { color: #EF4444; font-size: 14px; margin-bottom: 15px; display: none; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .link-reg { color: #9CA3AF; text-decoration: none; font-size: 13px; display: block; margin-top: 20px; }
+        .link-reg span { color: #3B82F6; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -22,76 +29,90 @@
     <div class="container">
         <img src="https://files.catbox.moe/p862f1.png" class="logo-img" alt="Logo">
         <h2>Astro Bot</h2>
-        <p style="color: #9CA3AF; font-size: 14px; margin-bottom: 25px;">Digite seu WhatsApp para entrar</p>
+        <p>Acesse sua conta para continuar</p>
         
         <div id="msg-erro"></div>
 
         <div class="input-group">
-            <input type="text" id="tel_login" placeholder="Ex: 21999999999">
+            <input type="text" id="tel_login" placeholder="DDD + Seu Número" 
+                   onkeypress="if(event.key === 'Enter') realizarLogin()">
         </div>
 
-        <button type="button" class="btn-login" id="btn-entrar" onclick="tentarLogar()">Acessar Chat</button>
+        <button type="button" class="btn-login" id="btn-entrar" onclick="realizarLogin()">Entrar no Chat</button>
         
-        <a href="registro.html" style="color: #3B82F6; display: block; margin-top: 20px; text-decoration: none; font-size: 14px;">Não tem conta? Cadastre-se</a>
+        <a href="registro.html" class="link-reg">Não tem uma conta? <span>Cadastre-se aqui</span></a>
     </div>
 
     <script>
+        // CONFIGURAÇÕES DO SEU SUPABASE
         const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         const supa = window.supabase.createClient(S_URL, S_KEY);
 
-        async function tentarLogar() {
-            const tel = document.getElementById('tel_login').value.replace(/\D/g, '');
+        async function realizarLogin() {
+            const input = document.getElementById('tel_login');
+            const tel = input.value.replace(/\D/g, '');
             const btn = document.getElementById('btn-entrar');
             const erro = document.getElementById('msg-erro');
 
-            if (!tel) return;
+            if (tel.length < 10) {
+                erro.innerText = "Por favor, digite o número completo.";
+                erro.style.display = "block";
+                return;
+            }
 
             btn.disabled = true;
-            btn.innerText = "Carregando...";
+            btn.innerText = "Verificando...";
             erro.style.display = "none";
 
             try {
-                const { data, error } = await supa.from('clientes').select('*').eq('telefone', tel);
+                // 1. BUSCA O USUÁRIO PELO TELEFONE
+                const { data, error } = await supa
+                    .from('clientes')
+                    .select('*')
+                    .eq('telefone', tel);
 
                 if (error) throw error;
 
                 if (data && data.length > 0) {
                     const user = data[0];
+                    
+                    // 2. CHECAGEM DE ASSINATURA (Aceita TRUE, true ou Booleano real)
                     const ativo = String(user.assinatura_ativa).toLowerCase() === 'true';
 
                     if (ativo) {
+                        // 3. SINCRONIZAÇÃO COM O CHAT.HTML
+                        // Criamos o objeto 'astro_usuario_logado' que seu chat exige
+                        const payload = {
+                            nome: user.nome,
+                            id: user.id,
+                            telefone: tel
+                        };
+                        
+                        // Salva no localStorage para o chat reconhecer
+                        localStorage.setItem('astro_usuario_logado', JSON.stringify(payload));
                         localStorage.setItem('user_telefone', tel);
-                        
-                        // --- O PULO DO GATO ---
-                        // Forçamos o redirecionamento absoluto usando a URL do site
-                        const base = window.location.origin;
-                        const urlFinal = base + "/chat.html";
-                        
-                        console.log("Redirecionando para:", urlFinal);
-                        
-                        // Tenta 3 formas diferentes de redirecionar ao mesmo tempo
-                        window.location.href = urlFinal;
-                        window.location.assign(urlFinal);
-                        window.location.replace(urlFinal);
-                        
+
+                        // 4. REDIRECIONAMENTO LIMPO
+                        window.location.replace("chat.html");
                     } else {
-                        erro.innerText = "Assinatura inativa.";
+                        erro.innerText = "Sua assinatura não está ativa. Pague o PIX para entrar.";
                         erro.style.display = "block";
                         btn.disabled = false;
-                        btn.innerText = "Acessar Chat";
+                        btn.innerText = "Entrar no Chat";
                     }
                 } else {
-                    erro.innerText = "Número não encontrado.";
+                    erro.innerText = "Número não cadastrado. Crie sua conta primeiro.";
                     erro.style.display = "block";
                     btn.disabled = false;
-                    btn.innerText = "Acessar Chat";
+                    btn.innerText = "Entrar no Chat";
                 }
             } catch (err) {
-                erro.innerText = "Erro ao conectar.";
+                console.error("Erro no Login:", err);
+                erro.innerText = "Erro ao conectar. Tente novamente.";
                 erro.style.display = "block";
                 btn.disabled = false;
-                btn.innerText = "Acessar Chat";
+                btn.innerText = "Entrar no Chat";
             }
         }
     </script>
