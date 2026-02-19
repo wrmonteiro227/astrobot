@@ -1,206 +1,120 @@
-﻿﻿
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Astro | Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 400px; padding: 40px 30px; background: #111827; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        
+        h1 { font-size: 28px; margin-bottom: 10px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { color: #9CA3AF; font-size: 15px; margin-bottom: 30px; }
 
-        body {
-            background-color: #0B0F19;
-            color: #FFFFFF;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; font-size: 14px; color: #9CA3AF; margin-bottom: 8px; margin-left: 5px; }
+        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 16px; transition: 0.3s; }
+        .input-group input:focus { border-color: #3B82F6; background: rgba(255,255,255,0.08); }
 
-        .app-container {
-            width: 100%;
-            max-width: 420px;
-            height: 100vh;
-            max-height: 850px;
-            background: #111827;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
-        }
+        .btn-login { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; font-size: 16px; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-login:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-login:disabled { background: #374151; cursor: not-allowed; transform: none; }
 
-        .bot-avatar {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            border-radius: 25px;
-            margin-bottom: 20px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
-            transform: rotate(-5deg);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-        }
+        .footer-links { margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.05); pt: 20px; }
+        .footer-links a { color: #9CA3AF; text-decoration: none; font-size: 14px; display: block; margin-top: 15px; transition: 0.2s; }
+        .footer-links a span { color: #3B82F6; font-weight: 600; }
+        .footer-links a:hover { color: #FFFFFF; }
 
-            .bot-avatar img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-
-        h1 {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        p {
-            font-size: 15px;
-            color: #9CA3AF;
-            margin-bottom: 40px;
-            text-align: center;
-        }
-
-        .input-group {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-            .input-group label {
-                display: block;
-                margin-bottom: 8px;
-                font-size: 14px;
-                color: #E5E7EB;
-            }
-
-        .input-field {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 16px;
-            border-radius: 12px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-            .input-field:focus {
-                border-color: #8B5CF6;
-            }
-
-        .btn-login {
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 18px;
-            border-radius: 30px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-
-            .btn-login:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
-            }
-
-        #mensagem-erro {
-            color: #EF4444;
-            font-size: 14px;
-            margin-top: 15px;
-            text-align: center;
-            display: none;
-        }
+        #msg-erro { color: #EF4444; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; display: none; }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <div class="bot-avatar">
-            <img src="https://files.catbox.moe/p862f1.png" alt="Logo Astro">
-        </div>
+    <div class="container">
+        <h1>Astro Bot</h1>
+        <p>Bem-vindo de volta!</p>
 
-        <h1>Bem-vindo de volta!</h1>
-        <p>Insira seu número de WhatsApp cadastrado para acessar seu assistente.</p>
+        <div id="msg-erro"></div>
 
         <div class="input-group">
-            <label for="telefone">Seu Número (com DDD)</label>
-            <input type="tel" id="telefone" class="input-field" placeholder="Ex: 21999999999">
+            <label>Seu WhatsApp (Com DDD)</label>
+            <input type="text" id="tel_login" placeholder="Ex: 21999999999" maxlength="11">
         </div>
 
-        <button class="btn-login" onclick="fazerLogin()">Entrar</button>
-        <div id="mensagem-erro">Telefone não encontrado ou assinatura inativa.</div>
+        <button class="btn-login" id="btn-entrar" onclick="realizarLogin()">Entrar no Sistema</button>
+
+        <div class="footer-links">
+            <a href="registro.html">Ainda não tem conta? <span>Cadastre-se aqui</span></a>
+        </div>
     </div>
 
     <script>
-        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        const meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
+        // CONFIGURAÇÕES DO SUPABASE (Igual ao seu Registro)
+        const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+        const clientSupa = window.supabase.createClient(S_URL, S_KEY);
 
-        async function fazerLogin() {
-            const telefoneRaw = document.getElementById('telefone').value.trim();
+        async function realizarLogin() {
+            const telInput = document.getElementById('tel_login').value.replace(/\D/g, '');
+            const btn = document.getElementById('btn-entrar');
+            const erro = document.getElementById('msg-erro');
 
-            // FILTRO MÁGICO: Limpa o que o usuário digitou antes de procurar no banco
-            const telefoneLimpo = telefoneRaw.replace(/\D/g, '');
-
-            const divErro = document.getElementById('mensagem-erro');
-            const btnLogin = document.querySelector('.btn-login');
-
-            if (telefoneLimpo === '') {
-                divErro.textContent = "Por favor, digite seu número.";
-                divErro.style.display = 'block';
+            if (telInput.length < 10) {
+                erro.innerText = "Por favor, digite um número válido.";
+                erro.style.display = "block";
                 return;
             }
 
-            btnLogin.textContent = "Verificando...";
-            divErro.style.display = 'none';
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
+            erro.style.display = "none";
 
             try {
-                // Procura no banco usando apenas os números
-                const { data, error } = await meuSupabase
+                // BUSCA O USUÁRIO PELO TELEFONE
+                const { data, error } = await clientSupa
                     .from('clientes')
                     .select('*')
-                    .eq('telefone', telefoneLimpo)
+                    .eq('telefone', telInput)
                     .single();
 
                 if (error || !data) {
-                    throw new Error("Cliente não encontrado.");
+                    throw new Error("Usuário não encontrado. Verifique o número ou cadastre-se.");
                 }
 
-                if (data.assinatura_ativa !== true) {
-                    divErro.textContent = "Sua assinatura está inativa. Renove para continuar.";
-                    divErro.style.display = 'block';
-                    btnLogin.textContent = "Entrar";
-                    return;
+                // CHECA SE A ASSINATURA ESTÁ ATIVA
+                if (data.assinatura_ativa === true) {
+                    // TUDO OK! Salva o telefone na memória do navegador para o chat saber quem é
+                    localStorage.setItem('astro_user_tel', telInput);
+                    
+                    // REDIRECIONA PARA O CHAT (Ou sua página principal)
+                    window.location.href = 'chat.html'; 
+                } else {
+                    // USUÁRIO EXISTE MAS NÃO PAGOU
+                    erro.innerText = "Sua assinatura está expirada ou aguardando pagamento.";
+                    erro.style.display = "block";
+                    
+                    // Opcional: Mandar ele de volta para a tela de pagamento após 3 segundos
+                    setTimeout(() => {
+                        window.location.href = 'registro.html';
+                    }, 3000);
                 }
 
-                localStorage.setItem('astro_usuario_logado', JSON.stringify(data));
-                window.location.href = 'chat.html';
-
-            } catch (err) {
-                console.error(err);
-                divErro.textContent = "Telefone não encontrado. Verifique se digitou corretamente.";
-                divErro.style.display = 'block';
-                btnLogin.textContent = "Entrar";
+            } catch (e) {
+                erro.innerText = e.message;
+                erro.style.display = "block";
+                btn.disabled = false;
+                btn.innerText = "Entrar no Sistema";
             }
         }
+
+        // Permitir dar "Enter" no teclado para logar
+        document.getElementById('tel_login').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') realizarLogin();
+        });
     </script>
 </body>
-
 </html>
