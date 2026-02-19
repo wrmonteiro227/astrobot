@@ -12,22 +12,28 @@
         .container { width: 100%; max-width: 400px; padding: 30px; background: #111827; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .logo-img { width: 70px; height: 70px; border-radius: 50%; margin-bottom: 15px; border: 2px solid #8B5CF6; object-fit: cover; }
         .input-group { margin-bottom: 20px; text-align: left; }
-        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 16px; width: 100%; }
-        .btn-login { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; font-size: 16px; }
+        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 16px; width: 100%; text-align: center; }
+        .btn-login { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        .btn-login:disabled { opacity: 0.5; cursor: not-allowed; }
         #msg-erro { color: #EF4444; font-size: 14px; margin-bottom: 15px; display: none; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <img src="https://files.catbox.moe/p862f1.png" class="logo-img">
+        <img src="https://files.catbox.moe/p862f1.png" class="logo-img" alt="Logo">
         <h2>Astro Bot</h2>
-        <p style="color: #9CA3AF; font-size: 14px; margin-bottom: 25px;">Área de Acesso</p>
+        <p style="color: #9CA3AF; font-size: 14px; margin-bottom: 25px;">Digite seu número para entrar</p>
+        
         <div id="msg-erro"></div>
+
         <div class="input-group">
-            <input type="text" id="tel_login" placeholder="WhatsApp com DDD">
+            <input type="text" id="tel_login" placeholder="DDD + Número" onkeypress="if(event.key === 'Enter') realizarAcesso()">
         </div>
-        <button type="button" class="btn-login" id="btn-entrar" onclick="realizarLogin()">Acessar Chat</button>
+
+        <button type="button" class="btn-login" id="btn-entrar" onclick="realizarAcesso()">Acessar Chat</button>
+        
+        <a href="registro.html" style="color: #3B82F6; display: block; margin-top: 20px; text-decoration: none; font-size: 14px;">Não tem conta? Cadastre-se</a>
     </div>
 
     <script>
@@ -35,48 +41,56 @@
         const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         const supa = window.supabase.createClient(S_URL, S_KEY);
 
-        async function realizarLogin() {
-            const tel = document.getElementById('tel_login').value.replace(/\D/g, '');
+        async function realizarAcesso() {
+            const input = document.getElementById('tel_login');
+            const tel = input.value.replace(/\D/g, '');
             const btn = document.getElementById('btn-entrar');
             const erro = document.getElementById('msg-erro');
 
+            if (!tel) return;
+
             btn.disabled = true;
-            btn.innerText = "Conectando...";
+            btn.innerText = "Verificando...";
+            erro.style.display = "none";
 
             try {
-                // TESTE 1: BUSCA NO BANCO
                 const { data, error } = await supa.from('clientes').select('*').eq('telefone', tel);
-                
-                if (error) {
-                    alert("Erro no Supabase: " + error.message);
-                    return;
-                }
+
+                if (error) throw error;
 
                 if (data && data.length > 0) {
                     const user = data[0];
-                    
-                    // TESTE 2: VERIFICAR O QUE VEM NA COLUNA
-                    // Vamos aceitar qualquer variação de true ou 1
-                    const statusVal = user.assinatura_ativa;
-                    const checagem = String(statusVal).toLowerCase() === 'true' || statusVal === true || statusVal === 1;
+                    // Aceita qualquer variação de 'true' vindo do banco
+                    const ativo = String(user.assinatura_ativa).toLowerCase() === 'true';
 
-                    if (checagem) {
+                    if (ativo) {
                         localStorage.setItem('user_telefone', tel);
-                        alert("Login Autorizado! Redirecionando...");
                         
-                        // TESTE 3: REDIRECIONAMENTO FORÇADO
-                        window.location.assign(window.location.origin + '/chat.html');
+                        // REDIRECIONAMENTO RELATIVO (Mais seguro para Vercel)
+                        // Tenta primeiro o caminho simples
+                        window.location.href = "chat.html";
+
+                        // Se em 500ms não mudar, tenta o caminho forçado
+                        setTimeout(() => {
+                            window.location.assign("./chat.html");
+                        }, 500);
+                        
                     } else {
-                        alert("Sua assinatura está como: " + statusVal + ". Por isso não entra.");
-                        erro.innerText = "Assinatura inativa no banco.";
+                        erro.innerText = "Sua assinatura não está ativa.";
                         erro.style.display = "block";
+                        btn.disabled = false;
+                        btn.innerText = "Acessar Chat";
                     }
                 } else {
-                    alert("Telefone " + tel + " não encontrado no banco.");
+                    erro.innerText = "Número não encontrado no banco.";
+                    erro.style.display = "block";
+                    btn.disabled = false;
+                    btn.innerText = "Acessar Chat";
                 }
             } catch (err) {
-                alert("Erro Fatal: " + err.message);
-            } finally {
+                console.error(err);
+                erro.innerText = "Erro ao conectar. Tente novamente.";
+                erro.style.display = "block";
                 btn.disabled = false;
                 btn.innerText = "Acessar Chat";
             }
