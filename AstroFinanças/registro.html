@@ -51,9 +51,10 @@
     </div>
 
     <script>
-        const supabaseUrl = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmFneWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        // Usei "meuSupa" para não dar conflito com a biblioteca global
+        const sUrl = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+        const sKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmFneWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+        const meuSupa = window.supabase.createClient(sUrl, sKey);
 
         async function cadastrar() {
             const nome = document.getElementById('nome_user').value;
@@ -63,19 +64,21 @@
             const erro = document.getElementById('msg-erro');
 
             if(!nome || !tel || !cpf) {
-                erro.innerText = "Preencha tudo corretamente!";
+                erro.innerText = "Preencha todos os campos corretamente!";
                 erro.style.display = "block";
                 return;
             }
 
             btn.disabled = true;
             btn.innerText = "Gerando...";
+            erro.style.display = "none";
 
             try {
                 // 1. Salva no Supabase
-                await supabase.from('clientes').insert([{ nome, telefone: tel, assinatura_ativa: false }]);
+                const { error: errSupa } = await meuSupa.from('clientes').insert([{ nome, telefone: tel, assinatura_ativa: false }]);
+                if (errSupa && errSupa.code !== '23505') throw new Error("Erro ao salvar dados.");
 
-                // 2. Chama a API na pasta api/gerar-pix.js
+                // 2. Chama a API da Vercel (Back-end)
                 const res = await fetch('/api/gerar-pix', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
