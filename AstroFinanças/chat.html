@@ -304,32 +304,32 @@
 
     <script>
         // 1. VERIFICA QUEM ESTÁ LOGADO
-        const usuarioLogado = JSON.parse(localStorage.getItem('astro_usuario_logado'));
+        const dadosBrutos = localStorage.getItem('astro_usuario_logado');
+let usuarioLogado = null;
 
-        if (!usuarioLogado) {
-            window.location.href = 'login.html';
-        }
+try {
+    // Tenta ler o presente que o login enviou
+    usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null;
+} catch (e) {
+    console.error("Erro ao ler dados de login:", e);
+    usuarioLogado = null;
+}
 
-        const nomeUsuario = usuarioLogado ? usuarioLogado.nome : 'Visitante';
-        const idUsuario = usuarioLogado ? usuarioLogado.id : null;
+// Se não tiver ninguém logado, volta pro login sem conversa
+if (!usuarioLogado || !usuarioLogado.nome) {
+    window.location.href = 'login.html';
+}
 
-        // 2. CONFIGURAÇÃO DO SUPABASE
-        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        let meuSupabase = null;
-
-        try {
-            if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
-        } catch (erro) {
-            console.error("Erro ao iniciar o banco:", erro);
-        }
+// Define as variáveis que o resto do seu código já usa
+const nomeUsuario = usuarioLogado.nome;
+const idUsuario = usuarioLogado.id;
 
         // 3. MENSAGEM DE BOAS-VINDAS
         document.addEventListener('DOMContentLoaded', () => {
             const painelChat = document.getElementById('chat-messages');
             painelChat.innerHTML = `
                     <div class="message bot">
-                        Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou diga "limpar" para apagar seu histórico. 🚀
+                        Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou uma tarefa se organize comigo . 🚀
                     </div>
                 `;
         });
@@ -527,6 +527,7 @@
     </script>
 </body>
 </html>
+
 
 
 
