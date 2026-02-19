@@ -417,379 +417,224 @@
 
 
     <script>
-
         // 1. VERIFICA QUEM ESTÁ LOGADO
-
         const usuarioLogado = JSON.parse(localStorage.getItem('astro_usuario_logado'));
-
-
-
+        
         if (!usuarioLogado) {
-
-            window.location.href = 'login.html'; // Expulsa se não estiver logado
-
+            window.location.href = 'login.html'; 
         }
 
-
-
-        const nomeUsuario = usuarioLogado.nome;
-
-        const idUsuario = usuarioLogado.id;
-
-
+        const nomeUsuario = usuarioLogado ? usuarioLogado.nome : 'Visitante';
+        const idUsuario = usuarioLogado ? usuarioLogado.id : null;
 
         // 2. CONFIGURAÇÃO DO SUPABASE
-
         const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-
         const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-
         let meuSupabase = null;
 
-
-
         try {
-
             if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
-
         } catch (erro) {
-
             console.error("Erro ao iniciar o banco:", erro);
-
         }
 
-
-
-        // 3. MENSAGEM DE BOAS-VINDAS DINÂMICA
-
+        // 3. MENSAGEM DE BOAS-VINDAS
         document.addEventListener('DOMContentLoaded', () => {
-
             const painelChat = document.getElementById('chat-messages');
-
             painelChat.innerHTML = `
-
-                                <div class="message bot">
-
-                                    Olá, ${nomeUsuario}! Eu sou o Astro. Diga-me uma tarefa ou um gasto que teve e eu organizo tudo! 🚀
-
-                                </div>
-
-                            `;
-
+                <div class="message bot">
+                    Olá, ${nomeUsuario}! Eu sou o Astro. Diga-me uma tarefa, um gasto, ou me pergunte: "Quanto gastei hoje?" 🚀
+                </div>
+            `;
         });
 
-
-
-        // 4. FUNÇÕES DE TEXTO
-
+        // 4. FUNÇÕES DE TELA E TEMPO
         function verificarEnter(event) {
-
             if (event.key === 'Enter') enviarMensagem();
-
         }
-
-
 
         function adicionarMensagem(texto, remetente) {
-
             const chatMessages = document.getElementById('chat-messages');
-
             const novaMensagem = document.createElement('div');
-
             novaMensagem.classList.add('message', remetente);
-
             novaMensagem.textContent = texto;
-
             chatMessages.appendChild(novaMensagem);
-
             chatMessages.scrollTop = chatMessages.scrollHeight;
-
         }
 
+        function obterDataFiltro(periodo) {
+            const data = new Date();
+            if (periodo === 'hoje') {
+                data.setHours(0,0,0,0);
+            } else if (periodo === 'semana') {
+                const dia = data.getDay();
+                data.setDate(data.getDate() - dia); 
+                data.setHours(0,0,0,0);
+            } else if (periodo === 'mes') {
+                data.setDate(1); 
+                data.setHours(0,0,0,0);
+            }
+            return data.toISOString();
+        }
 
-
-        // 5. O CÉREBRO DO ASTRO
-
+        // 5. O SUPER CÉREBRO DO ASTRO
         function analisarTexto(texto) {
-
             let textoMin = texto.toLowerCase();
 
-            let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
+            // Consultas
+            if (textoMin.includes('quanto gastei') || textoMin.includes('quais os gastos') || textoMin.includes('meus gastos')) {
+                let periodo = 'hoje';
+                if (textoMin.includes('semana')) periodo = 'semana';
+                if (textoMin.includes('mês') || textoMin.includes('mes')) periodo = 'mes';
+                return { categoria: 'consulta', tipo: 'gastos', periodo: periodo };
+            }
 
+            if (textoMin.includes('tarefa') || textoMin.includes('fazer')) {
+                if (textoMin.includes('quais') || textoMin.includes('tenho') || textoMin.includes('fiz')) {
+                    let status = textoMin.includes('fiz') || textoMin.includes('concluíd') ? 'concluida' : 'pendente';
+                    return { categoria: 'consulta', tipo: 'tarefas', status: status };
+                }
+            }
+
+            // Cadastros
+            let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
             let valor = numeroEncontrado ? parseFloat(numeroEncontrado[0].replace(',', '.')) : 0;
 
-
-
-            if (textoMin.includes('gastei') || textoMin.includes('comprei') || textoMin.includes('paguei') || textoMin.includes('custou')) {
-
+            if (textoMin.includes('gastei') || textoMin.includes('comprei') || textoMin.includes('paguei')) {
                 return { categoria: 'financa', tipo: 'saida', valor: valor };
-
             }
-
-            if (textoMin.includes('recebi') || textoMin.includes('ganhei') || textoMin.includes('vendi') || textoMin.includes('entrou')) {
-
+            if (textoMin.includes('recebi') || textoMin.includes('ganhei') || textoMin.includes('vendi')) {
                 return { categoria: 'financa', tipo: 'entrada', valor: valor };
-
             }
-
-
-
             return { categoria: 'tarefa' };
-
         }
 
-
-
         async function enviarMensagem() {
-
             const messageInput = document.getElementById('message-input');
-
             const texto = messageInput.value.trim();
 
-
-
             if (texto !== '') {
-
                 adicionarMensagem(texto, 'user');
-
                 messageInput.value = '';
-
-
-
-                if (!meuSupabase) {
-
-                    setTimeout(() => adicionarMensagem('Erro: Supabase não conectou.', 'bot'), 1000);
-
-                    return;
-
-                }
-
-
+                if (!meuSupabase) return;
 
                 const analise = analisarTexto(texto);
 
-
-
                 try {
-
-                    if (analise.categoria === 'financa') {
-
-                        const { error } = await meuSupabase
-
+                    // SE É UMA CONSULTA DE GASTOS
+                    if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
+                        const dataFiltro = obterDataFiltro(analise.periodo);
+                        
+                        // Busca o VALOR e a DESCRIÇÃO
+                        const { data, error } = await meuSupabase
                             .from('financas')
+                            .select('valor, descricao')
+                            .eq('cliente_id', idUsuario)
+                            .eq('tipo', 'saida')
+                            .gte('created_at', dataFiltro);
 
-                            .insert([{
+                        let periodoStr = analise.periodo === 'mes' ? 'este mês' : (analise.periodo === 'semana' ? 'esta semana' : 'hoje');
 
-                                cliente_id: idUsuario,
+                        if (data && data.length > 0) {
+                            let total = 0;
+                            let extrato = '';
+                            
+                            // Monta a lista item por item
+                            data.forEach(item => {
+                                total += item.valor;
+                                extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`;
+                            });
+                            
+                            // Monta a frase final no padrão que você pediu
+                            let resposta = `Olá ${nomeUsuario}, você gastou ${periodoStr}:\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)} gastos ${periodoStr}, ${nomeUsuario}!`;
+                            
+                            setTimeout(() => adicionarMensagem(resposta, 'bot'), 800);
+                        } else {
+                            setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
+                        }
 
-                                descricao: texto,
-
-                                tipo: analise.tipo,
-
-                                valor: analise.valor
-
-                            }]);
-
-
-
-                        setTimeout(() => {
-
-                            if (error) throw error;
-
-                            adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei uma ${analise.tipo} de R$ ${analise.valor.toFixed(2)} nas suas finanças.`, 'bot');
-
-                        }, 1000);
-
-
-
-                    } else {
-
-                        const { error } = await meuSupabase
-
+                    // SE É UMA CONSULTA DE TAREFAS
+                    } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
+                        const { data, error } = await meuSupabase
                             .from('tarefas')
-
-                            .insert([{
-
-                                cliente_id: idUsuario,
-
-                                descricao: texto,
-
-                                status: 'pendente'
-
-                            }]);
-
-
+                            .select('descricao')
+                            .eq('cliente_id', idUsuario)
+                            .eq('status', analise.status);
 
                         setTimeout(() => {
-
-                            if (error) throw error;
-
-                            adicionarMensagem(`Anotado, ${nomeUsuario}! ✅ Guardei isso na sua lista de tarefas.`, 'bot');
-
-                        }, 1000);
-
+                            if (data && data.length > 0) {
+                                let lista = data.map(t => `• ${t.descricao}`).join('\n');
+                                let cabeçalho = analise.status === 'pendente' ? '📋 Suas tarefas:\n' : '✅ Tarefas concluídas:\n';
+                                adicionarMensagem(cabeçalho + lista, 'bot');
+                            } else {
+                                adicionarMensagem(`Nenhuma tarefa ${analise.status === 'pendente' ? 'para fazer' : 'concluída'} encontrada.`, 'bot');
+                            }
+                        }, 800);
+                    
+                    // SE É UM CADASTRO NOVO
+                    } else if (analise.categoria === 'financa') {
+                        const { error } = await meuSupabase.from('financas').insert([{ 
+                            cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor 
+                        }]);
+                        setTimeout(() => { if (!error) adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei R$ ${analise.valor.toFixed(2)}.`, 'bot'); }, 800);
+                        
+                    } else {
+                        const { error } = await meuSupabase.from('tarefas').insert([{ 
+                            cliente_id: idUsuario, descricao: texto, status: 'pendente' 
+                        }]);
+                        setTimeout(() => { if (!error) adicionarMensagem(`Anotado, ${nomeUsuario}! ✅ Guardei na sua lista de tarefas.`, 'bot'); }, 800);
                     }
 
                 } catch (err) {
-
-                    setTimeout(() => adicionarMensagem('Erro ao guardar no banco de dados.', 'bot'), 1000);
-
                     console.error("Erro:", err);
-
                 }
-
             }
-
         }
 
-
-
-        // 6. MICROFONE (Com Ondas Visuais)
-
+        // 6. MICROFONE (BLINDADO)
         const btnMic = document.querySelector('.btn-mic');
-
         const inputMensagem = document.getElementById('message-input');
-
         const visualizador = document.getElementById('voice-visualizer');
-
-
-
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-
-
         if (SpeechRecognition) {
-
             const recognition = new SpeechRecognition();
+            recognition.continuous = false; 
+            recognition.lang = 'pt-BR'; 
+            let estaOuvindo = false, bloqueioClique = false;
 
-            recognition.continuous = false;
+            function resetarVisual() {
+                btnMic.textContent = '🎙️'; btnMic.style.color = '#9CA3AF';
+                visualizador.style.display = 'none'; inputMensagem.style.display = 'block';
+                inputMensagem.placeholder = 'Digite uma tarefa...';
+                estaOuvindo = false; bloqueioClique = false;
+            }
 
-            recognition.lang = 'pt-BR';
-
-            let estaOuvindo = false;
-
-
-
-            recognition.onstart = function () {
-
-                estaOuvindo = true;
-
-                btnMic.textContent = '🔴';
-
-                btnMic.style.color = '#EF4444';
-
-
-
-                inputMensagem.style.display = 'none';
-
-                visualizador.style.display = 'flex';
-
+            recognition.onstart = function() {
+                estaOuvindo = true; bloqueioClique = false;
+                btnMic.textContent = '🔴'; btnMic.style.color = '#EF4444'; 
+                inputMensagem.style.display = 'none'; visualizador.style.display = 'flex';
             };
 
-
-
-            recognition.onresult = function (event) {
-
-                const transcricao = event.results[0][0].transcript;
-
-
-
-                visualizador.style.display = 'none';
-
-                inputMensagem.style.display = 'block';
-
-
-
-                inputMensagem.value = transcricao;
-
-                enviarMensagem();
-
+            recognition.onresult = function(event) {
+                resetarVisual(); inputMensagem.value = event.results[0][0].transcript; enviarMensagem(); 
             };
 
-
-
-            recognition.onerror = function (event) {
-
-                console.error("Erro no microfone:", event.error);
-
-
-
-                if (event.error === 'not-allowed') {
-
-                    alert("O navegador bloqueou o microfone! Rode o projeto em um servidor (Live Server).");
-
-                }
-
-
-
-                btnMic.textContent = '🎙️';
-
-                btnMic.style.color = '#9CA3AF';
-
-                visualizador.style.display = 'none';
-
-                inputMensagem.style.display = 'block';
-
-                estaOuvindo = false;
-
+            recognition.onerror = function(event) {
+                console.warn("Aviso:", event.error); resetarVisual();
             };
 
-
-
-            recognition.onend = function () {
-
-                btnMic.textContent = '🎙️';
-
-                btnMic.style.color = '#9CA3AF';
-
-                visualizador.style.display = 'none';
-
-                inputMensagem.style.display = 'block';
-
-                estaOuvindo = false;
-
-            };
-
-
+            recognition.onend = function() { resetarVisual(); };
 
             btnMic.addEventListener('click', () => {
-
-                if (estaOuvindo) {
-
-                    recognition.stop(); // Se está ouvindo, manda parar
-
-                } else {
-
-                    estaOuvindo = true; // TRAVA IMEDIATA! Bloqueia antes mesmo do microfone ligar.
-
-                    try {
-
-                        recognition.start();
-
-                    } catch (erro) {
-
-                        estaOuvindo = false; // Se der erro ao ligar, destrava.
-
-                        console.warn("Aguarde o microfone inicializar...", erro);
-
-                    }
-
-                }
-
+                if (bloqueioClique) return;
+                bloqueioClique = true;
+                if (estaOuvindo) recognition.stop();
+                else { try { recognition.start(); } catch(e) { resetarVisual(); } }
             });
-
-        } else {
-
-            btnMic.addEventListener('click', () => {
-
-                alert("Seu navegador não suporta gravação de voz. Tente usar o Google Chrome!");
-
-            });
-
         }
-
     </script>
-
 </body>
+
 
 </html>
