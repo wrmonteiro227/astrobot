@@ -115,15 +115,13 @@
             const painelChat = document.getElementById('chat-messages');
             painelChat.innerHTML = `
                 <div class="message bot">
-                    Olá, ${nomeUsuario}! Eu sou o Astro. Diga-me uma tarefa, um gasto, ou me pergunte: "Quanto gastei hoje?" 🚀
+                    Olá, ${nomeUsuario}! Diga-me uma tarefa, um gasto com valor (ex: "300 com heineken"), ou pergunte: "Quanto gastei hoje?" 🚀
                 </div>
             `;
         });
 
         // 4. FUNÇÕES DE TELA E TEMPO
-        function verificarEnter(event) {
-            if (event.key === 'Enter') enviarMensagem();
-        }
+        function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
 
         function adicionarMensagem(texto, remetente) {
             const chatMessages = document.getElementById('chat-messages');
@@ -136,58 +134,42 @@
 
         function obterDataFiltro(periodo) {
             const data = new Date();
-            if (periodo === 'hoje') {
-                data.setHours(0,0,0,0);
-            } else if (periodo === 'semana') {
-                const dia = data.getDay();
-                data.setDate(data.getDate() - dia); 
-                data.setHours(0,0,0,0);
-            } else if (periodo === 'mes') {
-                data.setDate(1); 
-                data.setHours(0,0,0,0);
-            }
-            return data.toISOString();
+            if (periodo === 'hoje') { data.setHours(0,0,0,0); } 
+            else if (periodo === 'semana') { const dia = data.getDay(); data.setDate(data.getDate() - dia); data.setHours(0,0,0,0); } 
+            else if (periodo === 'mes') { data.setDate(1); data.setHours(0,0,0,0); }
+            return data.getTime(); // Trabalha com milissegundos para evitar erros
         }
 
-        // 5. O SUPER CÉREBRO DO ASTRO (Aprimorado)
+        // 5. O SUPER CÉREBRO DO ASTRO (BLINDADO)
         function analisarTexto(texto) {
             let textoMin = texto.toLowerCase();
 
-            // --- A. É PERGUNTA/CONSULTA? ---
-            // Reconhece palavras separadas (ex: "quanto eu gastei")
-            let ehConsultaGastos = (textoMin.includes('quanto') && (textoMin.includes('gastei') || textoMin.includes('gasto'))) || 
-                                   textoMin.includes('meus gastos');
-            
-            if (ehConsultaGastos) {
+            // A. É PERGUNTA/CONSULTA? (Se tiver essas palavras, é pesquisa!)
+            if (textoMin.includes('quanto') || textoMin.includes('extrato') || textoMin.includes('gastos') || textoMin.includes('resumo')) {
                 let periodo = 'hoje';
                 if (textoMin.includes('semana')) periodo = 'semana';
                 if (textoMin.includes('mês') || textoMin.includes('mes')) periodo = 'mes';
                 return { categoria: 'consulta', tipo: 'gastos', periodo: periodo };
             }
 
-            let ehConsultaTarefas = (textoMin.includes('quais') || textoMin.includes('minhas')) && 
-                                    (textoMin.includes('tarefa') || textoMin.includes('fazer'));
-            
-            if (ehConsultaTarefas) {
+            if ((textoMin.includes('quais') || textoMin.includes('minhas')) && (textoMin.includes('tarefa') || textoMin.includes('fazer'))) {
                 let status = textoMin.includes('fiz') || textoMin.includes('concluíd') ? 'concluida' : 'pendente';
                 return { categoria: 'consulta', tipo: 'tarefas', status: status };
             }
 
-            // --- B. É REGISTRO NOVO ---
-            // Procura números (ex: 300, 22.50, 22,50)
+            // B. É REGISTRO? (Procura OBRIGATORIAMENTE um número na frase)
             let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
-            let valor = numeroEncontrado ? parseFloat(numeroEncontrado[0].replace(',', '.')) : null;
-
-            // Se tem NÚMERO na frase, é finança!
-            if (valor !== null) {
+            
+            // Só vira Finança se tiver NÚMERO! Isso resolve o bug do R$ 0.00.
+            if (numeroEncontrado) {
+                let valor = parseFloat(numeroEncontrado[0].replace(',', '.'));
                 if (textoMin.includes('recebi') || textoMin.includes('ganhei') || textoMin.includes('vendi') || textoMin.includes('entrou')) {
                     return { categoria: 'financa', tipo: 'entrada', valor: valor };
                 }
-                // Se não é ganho, assume que é um gasto (ex: "300 com heineken")
                 return { categoria: 'financa', tipo: 'saida', valor: valor };
             }
 
-            // Se NÃO tem número, é uma tarefa! (ex: "comprar heineken")
+            // Se não for pergunta e não tiver número, é uma tarefa normal
             return { categoria: 'tarefa' };
         }
 
@@ -203,89 +185,93 @@
                 const analise = analisarTexto(texto);
 
                 try {
-                    // CONSULTA DE GASTOS
+                    // --- CONSULTA DE GASTOS ---
                     if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
-                        const dataFiltro = obterDataFiltro(analise.periodo);
                         
+                        // PUXA TUDO SEM FILTRO DE DATA NO SUPABASE (Fim do Erro 400!)
                         const { data, error } = await meuSupabase
                             .from('financas')
-                            .select('valor, descricao')
+                            .select('*') 
                             .eq('cliente_id', idUsuario)
-                            .eq('tipo', 'saida')
-                            .gte('created_at', dataFiltro);
+                            .eq('tipo', 'saida');
 
-                        let periodoStr = analise.periodo === 'mes' ? 'este mês' : (analise.periodo === 'semana' ? 'esta semana' : 'hoje');
-
-                        if (data && data.length > 0) {
-                            let total = 0;
-                            let extrato = '';
-                            
-                            data.forEach(item => {
-                                total += item.valor;
-                                extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`;
-                            });
-                            
-                            let resposta = `Olá ${nomeUsuario}, você gastou ${periodoStr}:\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)} gastos ${periodoStr}, ${nomeUsuario}!`;
-                            setTimeout(() => adicionarMensagem(resposta, 'bot'), 800);
-                        } else {
-                            setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
+                        if (error) {
+                            setTimeout(() => adicionarMensagem(`⚠️ Erro do Supabase: ${error.message}`, 'bot'), 800);
+                            return;
                         }
 
-                    // CONSULTA DE TAREFAS
+                        const timestampFiltro = obterDataFiltro(analise.periodo);
+                        let periodoStr = analise.periodo === 'mes' ? 'este mês' : (analise.periodo === 'semana' ? 'esta semana' : 'hoje');
+
+                        // Filtra com a nossa própria inteligência JavaScript
+                        let gastosValidos = [];
+                        if (data) {
+                            gastosValidos = data.filter(item => {
+                                if (!item.created_at) return true; // Se não tiver data salva, mostra
+                                return new Date(item.created_at).getTime() >= timestampFiltro;
+                            });
+                        }
+
+                        if (gastosValidos.length > 0) {
+                            let total = 0; let extrato = '';
+                            gastosValidos.forEach(item => { total += item.valor; extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao || 'gasto'}\n`; });
+                            setTimeout(() => adicionarMensagem(`Olá ${nomeUsuario}, você gastou ${periodoStr}:\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)} gastos ${periodoStr}!`, 'bot'), 800);
+                        } else {
+                            setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉 (Mas no seu banco tem ${data.length} gastos antigos).`, 'bot'), 800);
+                        }
+
+                    // --- CONSULTA DE TAREFAS ---
                     } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
-                        const { data, error } = await meuSupabase
-                            .from('tarefas')
-                            .select('descricao')
-                            .eq('cliente_id', idUsuario)
-                            .eq('status', analise.status);
+                        const { data, error } = await meuSupabase.from('tarefas').select('descricao').eq('cliente_id', idUsuario).eq('status', analise.status);
 
                         setTimeout(() => {
                             if (data && data.length > 0) {
                                 let lista = data.map(t => `• ${t.descricao}`).join('\n');
-                                let cabeçalho = analise.status === 'pendente' ? '📋 Suas tarefas:\n' : '✅ Tarefas concluídas:\n';
-                                adicionarMensagem(cabeçalho + lista, 'bot');
+                                adicionarMensagem((analise.status === 'pendente' ? '📋 Suas tarefas:\n' : '✅ Concluídas:\n') + lista, 'bot');
                             } else {
-                                adicionarMensagem(`Nenhuma tarefa ${analise.status === 'pendente' ? 'para fazer' : 'concluída'} encontrada.`, 'bot');
+                                adicionarMensagem(`Nenhuma tarefa encontrada.`, 'bot');
                             }
                         }, 800);
                     
-                    // CADASTRO NOVO (Gastos ou Tarefas)
+                    // --- CADASTRO NOVO (Gastos) ---
                     } else if (analise.categoria === 'financa') {
                         const { error } = await meuSupabase.from('financas').insert([{ 
                             cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor 
                         }]);
-                        setTimeout(() => { if (!error) adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei R$ ${analise.valor.toFixed(2)}.`, 'bot'); }, 800);
+                        setTimeout(() => { 
+                            if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
+                            else adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei R$ ${analise.valor.toFixed(2)}.`, 'bot'); 
+                        }, 800);
                         
+                    // --- CADASTRO NOVO (Tarefas) ---
                     } else {
                         const { error } = await meuSupabase.from('tarefas').insert([{ 
                             cliente_id: idUsuario, descricao: texto, status: 'pendente' 
                         }]);
-                        setTimeout(() => { if (!error) adicionarMensagem(`Anotado, ${nomeUsuario}! ✅ Guardei na sua lista de tarefas.`, 'bot'); }, 800);
+                        setTimeout(() => { 
+                            if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
+                            else adicionarMensagem(`Anotado, ${nomeUsuario}! ✅ Guardei na sua lista de tarefas.`, 'bot'); 
+                        }, 800);
                     }
 
-                } catch (err) {
-                    console.error("Erro:", err);
-                }
+                } catch (err) { console.error("Erro no fluxo:", err); }
             }
         }
 
-        // 6. MICROFONE (BLINDADO)
+        // 6. MICROFONE
         const btnMic = document.querySelector('.btn-mic');
         const inputMensagem = document.getElementById('message-input');
         const visualizador = document.getElementById('voice-visualizer');
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
         if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = false; 
-            recognition.lang = 'pt-BR'; 
+            const recognition = new SpeechRecognition(); recognition.continuous = false; recognition.lang = 'pt-BR'; 
             let estaOuvindo = false, bloqueioClique = false;
 
             function resetarVisual() {
                 btnMic.textContent = '🎙️'; btnMic.style.color = '#9CA3AF';
                 visualizador.style.display = 'none'; inputMensagem.style.display = 'block';
-                inputMensagem.placeholder = 'Digite uma tarefa...';
-                estaOuvindo = false; bloqueioClique = false;
+                inputMensagem.placeholder = 'Digite uma tarefa...'; estaOuvindo = false; bloqueioClique = false;
             }
 
             recognition.onstart = function() {
@@ -294,28 +280,17 @@
                 inputMensagem.style.display = 'none'; visualizador.style.display = 'flex';
             };
 
-            recognition.onresult = function(event) {
-                resetarVisual(); inputMensagem.value = event.results[0][0].transcript; enviarMensagem(); 
-            };
-
-            recognition.onerror = function(event) {
-                console.warn("Aviso:", event.error); resetarVisual();
-            };
-
+            recognition.onresult = function(event) { resetarVisual(); inputMensagem.value = event.results[0][0].transcript; enviarMensagem(); };
+            recognition.onerror = function() { resetarVisual(); };
             recognition.onend = function() { resetarVisual(); };
 
             btnMic.addEventListener('click', () => {
-                if (bloqueioClique) return;
-                bloqueioClique = true;
-                if (estaOuvindo) recognition.stop();
-                else { try { recognition.start(); } catch(e) { resetarVisual(); } }
-            });
-        } else {
-            btnMic.addEventListener('click', () => {
-                alert("Seu navegador não suporta gravação de voz. Tente usar o Chrome!");
+                if (bloqueioClique) return; bloqueioClique = true;
+                if (estaOuvindo) recognition.stop(); else { try { recognition.start(); } catch(e) { resetarVisual(); } }
             });
         }
     </script>
 </body>
 </html>
+
 
