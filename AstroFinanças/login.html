@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿﻿
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -154,9 +155,9 @@
 
         async function fazerLogin() {
             const telefoneRaw = document.getElementById('telefone').value.trim();
-            
+
             // FILTRO MÁGICO: Limpa o que o usuário digitou antes de procurar no banco
-            const telefoneLimpo = telefoneRaw.replace(/\D/g, ''); 
+            const telefoneLimpo = telefoneRaw.replace(/\D/g, '');
 
             const divErro = document.getElementById('mensagem-erro');
             const btnLogin = document.querySelector('.btn-login');
@@ -176,7 +177,7 @@
                     .from('clientes')
                     .select('*')
                     .eq('telefone', telefoneLimpo)
-                    .single(); 
+                    .single();
 
                 if (error || !data) {
                     throw new Error("Cliente não encontrado.");
@@ -190,7 +191,7 @@
                 }
 
                 localStorage.setItem('astro_usuario_logado', JSON.stringify(data));
-                window.location.href = 'chat.html'; 
+                window.location.href = 'chat.html';
 
             } catch (err) {
                 console.error(err);

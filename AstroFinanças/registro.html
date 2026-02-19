@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿﻿
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -183,9 +184,9 @@
         async function criarConta() {
             const nomeInput = document.getElementById('nome').value.trim();
             const telefoneRaw = document.getElementById('telefone').value.trim();
-            
+
             // O FILTRO MÁGICO: Apaga parênteses, traços e espaços
-            const telefoneLimpo = telefoneRaw.replace(/\D/g, ''); 
+            const telefoneLimpo = telefoneRaw.replace(/\D/g, '');
 
             const divErro = document.getElementById('mensagem-erro');
             const btnRegister = document.querySelector('.btn-register');
@@ -203,26 +204,26 @@
                 // Salva no banco usando o número limpo
                 const { data, error } = await meuSupabase
                     .from('clientes')
-                    .insert([{ 
-                        nome: nomeInput, 
-                        telefone: telefoneLimpo, 
-                        assinatura_ativa: false 
+                    .insert([{
+                        nome: nomeInput,
+                        telefone: telefoneLimpo,
+                        assinatura_ativa: false
                     }])
-                    .select() 
+                    .select()
                     .single();
 
                 if (error) {
-                    if (error.code === '23505') { 
+                    if (error.code === '23505') {
                         throw new Error("Esse telefone já está cadastrado. Faça login.");
                     }
                     throw error;
                 }
 
                 localStorage.setItem('astro_usuario_logado', JSON.stringify(data));
-                
+
                 // Link provisório de pagamento (depois você troca pelo da DivPag)
-                const linkDivPag = 'https://google.com'; 
-                window.location.href = linkDivPag; 
+                const linkDivPag = 'https://google.com';
+                window.location.href = linkDivPag;
 
             } catch (err) {
                 console.error(err);
