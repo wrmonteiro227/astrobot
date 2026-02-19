@@ -53,70 +53,64 @@
     </div>
 
     <script>
-        // CONFIGURAÇÕES DO SUPABASE (Igual ao seu Registro)
-        const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        const clientSupa = window.supabase.createClient(S_URL, S_KEY);
+    const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+    const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+    const supa = window.supabase.createClient(S_URL, S_KEY);
 
-        async function realizarLogin() {
-            const telInput = document.getElementById('tel_login').value.replace(/\D/g, '');
-            const btn = document.getElementById('btn-entrar');
-            const erro = document.getElementById('msg-erro');
+    async function logar() {
+        const tel = document.getElementById('tel_login').value.replace(/\D/g, '');
+        const btn = document.getElementById('btn-entrar');
+        const erro = document.getElementById('msg-erro');
 
-            if (telInput.length < 10) {
-                erro.innerText = "Por favor, digite um número válido.";
-                erro.style.display = "block";
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = "Verificando...";
-            erro.style.display = "none";
-
-            try {
-                // BUSCA O USUÁRIO PELO TELEFONE
-                const { data, error } = await clientSupa
-                    .from('clientes')
-                    .select('*')
-                    .eq('telefone', telInput)
-                    .single();
-
-                if (error || !data) {
-                    throw new Error("Usuário não encontrado. Verifique o número ou cadastre-se.");
-                }
-
-                // CHECA SE A ASSINATURA ESTÁ ATIVA
-                if (data.assinatura_ativa ===TRUE) {
-                    // TUDO OK! Salva o telefone na memória do navegador para o chat saber quem é
-                    localStorage.setItem('astro_user_tel', telInput);
-                    
-                    // REDIRECIONA PARA O CHAT (Ou sua página principal)
-                    window.location.href = 'chat.html'; 
-                } else {
-                    // USUÁRIO EXISTE MAS NÃO PAGOU
-                    erro.innerText = "Sua assinatura está expirada ou aguardando pagamento.";
-                    erro.style.display = "block";
-                    
-                    // Opcional: Mandar ele de volta para a tela de pagamento após 3 segundos
-                    setTimeout(() => {
-                        window.location.href = 'registro.html';
-                    }, 3000);
-                }
-
-            } catch (e) {
-                erro.innerText = e.message;
-                erro.style.display = "block";
-                btn.disabled = false;
-                btn.innerText = "Entrar no Sistema";
-            }
+        if (tel.length < 10) {
+            erro.innerText = "Digite um número válido.";
+            erro.style.display = "block";
+            return;
         }
 
-        // Permitir dar "Enter" no teclado para logar
-        document.getElementById('tel_login').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') realizarLogin();
-        });
-    </script>
+        btn.disabled = true;
+        btn.innerText = "Verificando...";
+        erro.style.display = "none";
+
+        try {
+            // Buscamos sem o .single() para evitar erros de duplicidade
+            const { data, error } = await supa
+                .from('clientes')
+                .select('*')
+                .eq('telefone', tel);
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                const usuario = data[0]; // Pegamos o primeiro registro encontrado
+
+                if (usuario.assinatura_ativa === true) {
+                    // SUCESSO!
+                    localStorage.setItem('user_telefone', tel);
+                    console.log("Login autorizado para:", tel);
+                    window.location.href = 'chat.html'; // Certifique-se que o nome do arquivo é chat.html
+                } else {
+                    erro.innerText = "Assinatura pendente. Redirecionando para pagamento...";
+                    erro.style.display = "block";
+                    setTimeout(() => { window.location.href = 'registro.html'; }, 2000);
+                }
+            } else {
+                erro.innerText = "Número não cadastrado.";
+                erro.style.display = "block";
+                btn.disabled = false;
+                btn.innerText = "Acessar Painel";
+            }
+        } catch (e) {
+            console.error("Erro no login:", e);
+            erro.innerText = "Erro ao conectar. Tente novamente.";
+            erro.style.display = "block";
+            btn.disabled = false;
+            btn.innerText = "Acessar Painel";
+        }
+    }
+</script>
 </body>
 </html>
+
 
 
