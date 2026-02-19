@@ -149,35 +149,45 @@
             return data.toISOString();
         }
 
-        // 5. O SUPER CÉREBRO DO ASTRO
+        // 5. O SUPER CÉREBRO DO ASTRO (Aprimorado)
         function analisarTexto(texto) {
             let textoMin = texto.toLowerCase();
 
-            // Consultas
-            if (textoMin.includes('quanto gastei') || textoMin.includes('quais os gastos') || textoMin.includes('meus gastos')) {
+            // --- A. É PERGUNTA/CONSULTA? ---
+            // Reconhece palavras separadas (ex: "quanto eu gastei")
+            let ehConsultaGastos = (textoMin.includes('quanto') && (textoMin.includes('gastei') || textoMin.includes('gasto'))) || 
+                                   textoMin.includes('meus gastos');
+            
+            if (ehConsultaGastos) {
                 let periodo = 'hoje';
                 if (textoMin.includes('semana')) periodo = 'semana';
                 if (textoMin.includes('mês') || textoMin.includes('mes')) periodo = 'mes';
                 return { categoria: 'consulta', tipo: 'gastos', periodo: periodo };
             }
 
-            if (textoMin.includes('tarefa') || textoMin.includes('fazer')) {
-                if (textoMin.includes('quais') || textoMin.includes('tenho') || textoMin.includes('fiz')) {
-                    let status = textoMin.includes('fiz') || textoMin.includes('concluíd') ? 'concluida' : 'pendente';
-                    return { categoria: 'consulta', tipo: 'tarefas', status: status };
-                }
+            let ehConsultaTarefas = (textoMin.includes('quais') || textoMin.includes('minhas')) && 
+                                    (textoMin.includes('tarefa') || textoMin.includes('fazer'));
+            
+            if (ehConsultaTarefas) {
+                let status = textoMin.includes('fiz') || textoMin.includes('concluíd') ? 'concluida' : 'pendente';
+                return { categoria: 'consulta', tipo: 'tarefas', status: status };
             }
 
-            // Cadastros
+            // --- B. É REGISTRO NOVO ---
+            // Procura números (ex: 300, 22.50, 22,50)
             let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
-            let valor = numeroEncontrado ? parseFloat(numeroEncontrado[0].replace(',', '.')) : 0;
+            let valor = numeroEncontrado ? parseFloat(numeroEncontrado[0].replace(',', '.')) : null;
 
-            if (textoMin.includes('gastei') || textoMin.includes('comprei') || textoMin.includes('paguei') || textoMin.includes('custou')) {
+            // Se tem NÚMERO na frase, é finança!
+            if (valor !== null) {
+                if (textoMin.includes('recebi') || textoMin.includes('ganhei') || textoMin.includes('vendi') || textoMin.includes('entrou')) {
+                    return { categoria: 'financa', tipo: 'entrada', valor: valor };
+                }
+                // Se não é ganho, assume que é um gasto (ex: "300 com heineken")
                 return { categoria: 'financa', tipo: 'saida', valor: valor };
             }
-            if (textoMin.includes('recebi') || textoMin.includes('ganhei') || textoMin.includes('vendi') || textoMin.includes('entrou')) {
-                return { categoria: 'financa', tipo: 'entrada', valor: valor };
-            }
+
+            // Se NÃO tem número, é uma tarefa! (ex: "comprar heineken")
             return { categoria: 'tarefa' };
         }
 
@@ -193,7 +203,7 @@
                 const analise = analisarTexto(texto);
 
                 try {
-                    // SE É UMA CONSULTA DE GASTOS
+                    // CONSULTA DE GASTOS
                     if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
                         const dataFiltro = obterDataFiltro(analise.periodo);
                         
@@ -216,13 +226,12 @@
                             });
                             
                             let resposta = `Olá ${nomeUsuario}, você gastou ${periodoStr}:\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)} gastos ${periodoStr}, ${nomeUsuario}!`;
-                            
                             setTimeout(() => adicionarMensagem(resposta, 'bot'), 800);
                         } else {
                             setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
                         }
 
-                    // SE É UMA CONSULTA DE TAREFAS
+                    // CONSULTA DE TAREFAS
                     } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
                         const { data, error } = await meuSupabase
                             .from('tarefas')
@@ -240,7 +249,7 @@
                             }
                         }, 800);
                     
-                    // SE É UM CADASTRO NOVO
+                    // CADASTRO NOVO (Gastos ou Tarefas)
                     } else if (analise.categoria === 'financa') {
                         const { error } = await meuSupabase.from('financas').insert([{ 
                             cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor 
@@ -303,9 +312,10 @@
             });
         } else {
             btnMic.addEventListener('click', () => {
-                alert("Seu navegador não suporta gravação de voz. Tente usar o Google Chrome!");
+                alert("Seu navegador não suporta gravação de voz. Tente usar o Chrome!");
             });
         }
     </script>
 </body>
 </html>
+
