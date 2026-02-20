@@ -1,37 +1,49 @@
-// ATENÇÃO: Este arquivo é PURO JAVASCRIPT. Não use <script> aqui.
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
-
-    const { nome, tel, cpf } = req.body;
-
-    // Coloque suas credenciais reais aqui
-    const CLIENT_ID = 'wrmonteiro_9698775123'; 
-    const CLIENT_SECRET = '05a6360e459d7cf2e28ba68e0abd94296826a1fe3c7273c5443bcc9bacc6f70c';
+    // 1. Só aceita requisição POST
+    if (req.method !== 'POST') {
+        return res.status(405).json({ erro: 'Método não permitido' });
+    }
 
     try {
-        const params = new URLSearchParams();
-        params.append('client_id', CLIENT_ID);
-        params.append('client_secret', CLIENT_SECRET);
-        params.append('nome', nome);
-        params.append('cpf', cpf);
-        params.append('valor', '29.90');
-        params.append('descricao', 'Assinatura Astro');
-        params.append('urlnoty', `https://astrobot-ebon.vercel.app/api/webhook?telefone=${tel}`);
+        // 2. Recebe os dados do seu arquivo registro.html
+        const { nome, cpf, telefone } = req.body;
 
-        const resposta = await fetch('https://divpag.com/v3/pix/qrcode', {
+        // 3. Suas credenciais seguras e escondidas no servidor
+        const clientId = 'wrmonteiro_9698775123'; // 🔴 COLOQUE SEU ID AQUI
+        const clientSecret = '05a6360e459d7cf2e28ba68e0abd94296826a1fe3c7273c5443bcc9bacc6f70c'; // 🔴 COLOQUE SUA CHAVE AQUI
+
+        const divpagUrl = 'https://divpag.com/v3/pix/qrcode';
+
+        // 4. Monta o pacote de dados para enviar à DivPag
+        const dadosDivPag = new URLSearchParams();
+        dadosDivPag.append('client_id', clientId);
+        dadosDivPag.append('client_secret', clientSecret);
+        dadosDivPag.append('nome', nome);
+        dadosDivPag.append('cpf', cpf);
+        dadosDivPag.append('valor', '29.90'); // PREÇO DA ASSINATURA
+        dadosDivPag.append('descricao', 'Assinatura Mensal Astro');
+        
+        // Manda o telefone do cliente escondido no link pro Webhook saber quem pagou!
+        dadosDivPag.append('urlnoty', `https://astrobot-ebon.vercel.app/api/webhook?telefone=${telefone}`);
+
+        // 5. A Vercel conversa com a DivPag (Sem erro de CORS!)
+        const respostaPix = await fetch(divpagUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params
+            body: dadosDivPag
         });
 
-        const data = await resposta.json();
+        const pixJson = await respostaPix.json();
 
-        if (data.qrcode) {
-            res.status(200).json({ qrcode: data.qrcode });
+        // 6. Devolve o QRCode para a tela do usuário
+        if (pixJson.qrcode) {
+            return res.status(200).json({ qrcode: pixJson.qrcode });
         } else {
-            res.status(400).json({ erro: data.message || 'Erro na DivPag' });
+            return res.status(400).json({ erro: pixJson.message || 'Erro na DivPag' });
         }
-    } catch (error) {
-        res.status(500).json({ erro: 'Erro interno no servidor' });
+
+    } catch (erro) {
+        console.error("Erro ao gerar PIX:", erro);
+        return res.status(500).json({ erro: 'Erro interno no servidor' });
     }
 }

@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro | Chat</title>
+    <title>Astro | Chat Inteligente</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -141,6 +141,11 @@
             box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
         }
 
+        .message.temp {
+            opacity: 0.6;
+            font-style: italic;
+        }
+
         .chat-input-area {
             padding: 15px 20px;
             background: #111827;
@@ -229,15 +234,41 @@
             animation: sound 0ms -800ms linear infinite alternate;
         }
 
-            .bar:nth-child(1) { height: 4px; animation-duration: 474ms; }
-            .bar:nth-child(2) { height: 12px; animation-duration: 433ms; }
-            .bar:nth-child(3) { height: 22px; animation-duration: 407ms; }
-            .bar:nth-child(4) { height: 12px; animation-duration: 458ms; }
-            .bar:nth-child(5) { height: 4px; animation-duration: 400ms; }
+            .bar:nth-child(1) {
+                height: 4px;
+                animation-duration: 474ms;
+            }
+
+            .bar:nth-child(2) {
+                height: 12px;
+                animation-duration: 433ms;
+            }
+
+            .bar:nth-child(3) {
+                height: 22px;
+                animation-duration: 407ms;
+            }
+
+            .bar:nth-child(4) {
+                height: 12px;
+                animation-duration: 458ms;
+            }
+
+            .bar:nth-child(5) {
+                height: 4px;
+                animation-duration: 400ms;
+            }
 
         @keyframes sound {
-            0% { opacity: 0.35; height: 4px; }
-            100% { opacity: 1; height: 22px; }
+            0% {
+                opacity: 0.35;
+                height: 4px;
+            }
+
+            100% {
+                opacity: 1;
+                height: 22px;
+            }
         }
     </style>
 </head>
@@ -249,7 +280,7 @@
                 <img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot">
             </div>
             <div class="header-info">
-                <span class="bot-name">Astro</span>
+                <span class="bot-name">Astro Inteligente</span>
                 <span class="bot-status">Online</span>
             </div>
         </header>
@@ -258,12 +289,8 @@
 
         <footer class="chat-input-area">
             <div class="input-wrapper">
-                <input type="text" class="chat-input" id="message-input" placeholder="Digite uma tarefa..." onkeypress="verificarEnter(event)">
-
-                <div id="voice-visualizer">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-
+                <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
+                <div id="voice-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
                 <button class="action-btn btn-mic">🎙️</button>
             </div>
             <button class="action-btn btn-send" onclick="enviarMensagem()">➤</button>
@@ -271,60 +298,36 @@
     </div>
 
     <script>
-        // 1. VERIFICA QUEM ESTÁ LOGADO
+        // 1. VERIFICA LOGIN
         const dadosBrutos = localStorage.getItem('astro_usuario_logado');
         let usuarioLogado = null;
-
-        try {
-            // Tenta ler o presente que o login enviou
-            usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null;
-        } catch (e) {
-            console.error("Erro ao ler dados de login:", e);
-            usuarioLogado = null;
-        }
-
-        // Se não tiver ninguém logado, volta pro login sem conversa
-        if (!usuarioLogado || !usuarioLogado.nome) {
-            window.location.href = 'login.html';
-        }
-
-        // Define as variáveis que o resto do seu código já usa
+        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
+        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
         const nomeUsuario = usuarioLogado.nome;
         const idUsuario = usuarioLogado.id;
 
-        // --- AQUI ESTÁ O BLOCO QUE FALTAVA ---
-        // 2. CONFIGURAÇÃO DO SUPABASE
+        // 2. CONFIGURAÇÃO SUPABASE
         const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         let meuSupabase = null;
+        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
 
-        try {
-            if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
-        } catch (erro) {
-            console.error("Erro ao iniciar o banco:", erro);
-        }
-        // -------------------------------------
-
-        // 3. MENSAGEM DE BOAS-VINDAS
+        // BOAS VINDAS
         document.addEventListener('DOMContentLoaded', () => {
-            const painelChat = document.getElementById('chat-messages');
-            painelChat.innerHTML = `
-                    <div class="message bot">
-                        Olá, ${nomeUsuario}! Diga o que precisa fazer, registre um gasto, ou uma tarefa se organize comigo . 🚀
-                    </div>
-                `;
+            adicionarMensagem(`E aí, ${nomeUsuario}! Fui atualizado com Inteligência Artificial. Pode falar comigo naturalmente. O que manda hoje? 🚀`, 'bot');
         });
 
-        // 4. FUNÇÕES DE TELA E TEMPO
         function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
 
-        function adicionarMensagem(texto, remetente) {
+        function adicionarMensagem(texto, remetente, id = null) {
             const chatMessages = document.getElementById('chat-messages');
-            const novaMensagem = document.createElement('div');
-            novaMensagem.classList.add('message', remetente);
-            novaMensagem.textContent = texto;
-            chatMessages.appendChild(novaMensagem);
+            const msg = document.createElement('div');
+            msg.classList.add('message', remetente);
+            if (id) msg.id = id;
+            msg.textContent = texto;
+            chatMessages.appendChild(msg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            return msg;
         }
 
         function obterDataFiltro(periodo) {
@@ -333,43 +336,6 @@
             else if (periodo === 'semana') { const dia = data.getDay(); data.setDate(data.getDate() - dia); data.setHours(0, 0, 0, 0); }
             else if (periodo === 'mes') { data.setDate(1); data.setHours(0, 0, 0, 0); }
             return data.getTime();
-        }
-
-        // 5. O SUPER CÉREBRO DO ASTRO
-        function analisarTexto(texto) {
-            let textoMin = texto.toLowerCase();
-
-            if (textoMin.includes('quanto') || textoMin.includes('extrato') || textoMin.includes('gastos') || textoMin.includes('resumo')) {
-                let periodo = 'hoje';
-                if (textoMin.includes('semana')) periodo = 'semana';
-                if (textoMin.includes('mês') || textoMin.includes('mes')) periodo = 'mes';
-                return { categoria: 'consulta', tipo: 'gastos', periodo: periodo };
-            }
-
-            let ehConsultaTarefas = (textoMin.includes('o que') || textoMin.includes('oque') || textoMin.includes('quais')) &&
-                (textoMin.includes('fazer') || textoMin.includes('tarefa'));
-
-            if (ehConsultaTarefas) {
-                let periodo = 'hoje';
-                if (textoMin.includes('semana')) periodo = 'semana';
-                if (textoMin.includes('mês') || textoMin.includes('mes')) periodo = 'mes';
-                let status = textoMin.includes('fiz') || textoMin.includes('concluíd') ? 'concluida' : 'pendente';
-                return { categoria: 'consulta', tipo: 'tarefas', status: status, periodo: periodo };
-            }
-
-            let numeroEncontrado = texto.match(/\d+(?:[.,]\d+)?/);
-            let palavrasDinheiro = ['gastei', 'comprei', 'paguei', 'custou', 'recebi', 'ganhei', 'vendi', 'entrou', 'reais', 'com'];
-            let temPalavraDinheiro = palavrasDinheiro.some(palavra => textoMin.includes(palavra));
-
-            if (numeroEncontrado && temPalavraDinheiro) {
-                let valor = parseFloat(numeroEncontrado[0].replace(',', '.'));
-                if (textoMin.includes('recebi') || textoMin.includes('ganhei') || textoMin.includes('vendi') || textoMin.includes('entrou')) {
-                    return { categoria: 'financa', tipo: 'entrada', valor: valor };
-                }
-                return { categoria: 'financa', tipo: 'saida', valor: valor };
-            }
-
-            return { categoria: 'tarefa' };
         }
 
         let aguardandoLimpeza = false;
@@ -381,98 +347,102 @@
             if (texto !== '') {
                 adicionarMensagem(texto, 'user');
                 messageInput.value = '';
+
                 if (!meuSupabase) return;
 
                 let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // --- SISTEMA DE LIMPEZA (CLEAR ALL) COM CONFIRMAÇÃO OBRIGATÓRIA ---
-
+                    // MANTIVE O SISTEMA DE LIMPEZA DE EMERGÊNCIA LOCAL
                     if (aguardandoLimpeza) {
                         if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
-                            const { error } = await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
+                            await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(error ? `⚠️ Erro: ${error.message}` : `🗑️ Histórico de finanças apagado com sucesso, ${nomeUsuario}!`, 'bot'), 800);
+                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de finanças apagado com sucesso!`, 'bot'), 400);
                             return;
                         } else if (textoTratado.includes('tarefa')) {
-                            const { error } = await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
+                            await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(error ? `⚠️ Erro: ${error.message}` : `🗑️ Histórico de tarefas apagado com sucesso, ${nomeUsuario}!`, 'bot'), 800);
+                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado.includes('cancelar') || textoTratado.includes('não') || textoTratado.includes('nada')) {
+                        } else if (textoTratado.includes('cancelar') || textoTratado.includes('não')) {
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`Ufa! Operação cancelada. Seus dados estão a salvo.`, 'bot'), 800);
-                            return;
-                        } else {
-                            setTimeout(() => adicionarMensagem(`Não entendi. Por favor, responda apenas com "finanças", "tarefas" ou "cancelar".`, 'bot'), 800);
+                            setTimeout(() => adicionarMensagem(`Operação cancelada!`, 'bot'), 400);
                             return;
                         }
                     }
 
-                    if (textoTratado.includes('limpar') || textoTratado.includes('apagar')) {
-                        aguardandoLimpeza = true; 
-                        setTimeout(() => adicionarMensagem(`⚠️ CUIDADO: Você ativou a limpeza de dados!\n\nO que você deseja limpar?\nResponda com:\n- "Finanças"\n- "Tarefas"\n- "Cancelar" (Para sair)`, 'bot'), 800);
+                    if (textoTratado === 'limpar' || textoTratado === 'apagar') {
+                        aguardandoLimpeza = true;
+                        setTimeout(() => adicionarMensagem(`⚠️ Você ativou a limpeza!\nO que deseja apagar?\n- "Finanças"\n- "Tarefas"\n- "Cancelar"`, 'bot'), 400);
                         return;
                     }
 
-                    // --- CONTINUAÇÃO NORMAL ---
-                    const analise = analisarTexto(texto);
+                    // --- O PULO DO GATO: CHAMADA DA INTELIGÊNCIA ARTIFICIAL ---
+                    const idCarregando = "msg-" + Date.now();
+                    adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
 
-                    if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
-                        const { data, error } = await meuSupabase.from('financas').select('*').eq('cliente_id', idUsuario).eq('tipo', 'saida');
-                        if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro do Supabase: ${error.message}`, 'bot'), 800); return; }
+                    const resAPI = await fetch('/api/cerebro', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ texto: texto, nomeUsuario: nomeUsuario })
+                    });
 
-                        const timestampFiltro = obterDataFiltro(analise.periodo);
-                        let periodoStr = analise.periodo === 'mes' ? 'este mês' : (analise.periodo === 'semana' ? 'esta semana' : 'hoje');
+                    // Remove a mensagem de "Astro está pensando"
+                    document.getElementById(idCarregando).remove();
 
-                        let gastosValidos = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
-
-                        if (gastosValidos.length > 0) {
-                            let total = 0; let extrato = '';
-                            gastosValidos.forEach(item => { total += item.valor; extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao || 'gasto'}\n`; });
-                            setTimeout(() => adicionarMensagem(`Olá ${nomeUsuario}, você gastou ${periodoStr}:\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)} gastos ${periodoStr}!`, 'bot'), 800);
-                        } else {
-                            setTimeout(() => adicionarMensagem(`Nenhum gasto registrado ${periodoStr}, ${nomeUsuario}! 🎉`, 'bot'), 800);
-                        }
-
-                    } else if (analise.categoria === 'consulta' && analise.tipo === 'tarefas') {
-                        const { data, error } = await meuSupabase.from('tarefas').select('*').eq('cliente_id', idUsuario).eq('status', analise.status);
-                        if (error) { setTimeout(() => adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'), 800); return; }
-
-                        const timestampFiltro = obterDataFiltro(analise.periodo);
-                        let periodoStr = analise.periodo === 'mes' ? 'deste mês' : (analise.periodo === 'semana' ? 'desta semana' : 'de hoje');
-
-                        let tarefasValidas = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
-
-                        setTimeout(() => {
-                            if (tarefasValidas.length > 0) {
-                                let lista = tarefasValidas.map(t => `• ${t.descricao}`).join('\n');
-                                adicionarMensagem((analise.status === 'pendente' ? `📋 Suas tarefas ${periodoStr}:\n` : `✅ Concluídas ${periodoStr}:\n`) + lista, 'bot');
-                            } else {
-                                adicionarMensagem(`Você não tem tarefas ${analise.status === 'pendente' ? 'pendentes' : 'concluídas'} ${periodoStr}, ${nomeUsuario}! 🏖️`, 'bot');
-                            }
-                        }, 800);
-
-                    } else if (analise.categoria === 'financa') {
-                        const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
-                        setTimeout(() => {
-                            if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
-                            else adicionarMensagem(`Anotado, ${nomeUsuario}! 💸 Registrei R$ ${analise.valor.toFixed(2)}.`, 'bot');
-                        }, 800);
-
-                    } else {
-                        const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: 'pendente' }]);
-                        setTimeout(() => {
-                            if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
-                            else adicionarMensagem(`Anotado, ${nomeUsuario}! ✅ Guardei na sua lista de tarefas.`, 'bot');
-                        }, 800);
+                    if (!resAPI.ok) {
+                        adicionarMensagem("⚠️ Ih, minha conexão falhou. Tente novamente.", 'bot');
+                        return;
                     }
 
-                } catch (err) { console.error("Erro no fluxo:", err); }
+                    const analise = await resAPI.json();
+
+                    // EXECUÇÃO NO SUPABASE BASEADO NO QUE A IA ENTENDEU
+                    if (analise.categoria === 'financa') {
+                        const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
+                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
+                        else adicionarMensagem(analise.mensagem, 'bot');
+
+                    } else if (analise.categoria === 'tarefa') {
+                        const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: analise.tipo || 'pendente' }]);
+                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
+                        else adicionarMensagem(analise.mensagem, 'bot');
+
+                    } else if (analise.categoria === 'consulta') {
+                        // IA identificou que é uma consulta ao banco (Ex: "Quanto gastei hoje?")
+                        const tabela = analise.tipo === 'gastos' ? 'financas' : 'tarefas';
+                        const filtroStatus = analise.tipo === 'gastos' ? 'saida' : 'pendente';
+
+                        const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(tabela === 'financas' ? 'tipo' : 'status', filtroStatus);
+
+                        if (error) { adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'); return; }
+
+                        const timestampFiltro = obterDataFiltro(analise.periodo || 'hoje');
+                        let itensValidos = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
+
+                        if (itensValidos.length > 0) {
+                            if (tabela === 'financas') {
+                                let total = 0; let extrato = '';
+                                itensValidos.forEach(item => { total += item.valor; extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`; });
+                                adicionarMensagem(`${analise.mensagem}\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)}`, 'bot');
+                            } else {
+                                let lista = itensValidos.map(t => `• ${t.descricao}`).join('\n');
+                                adicionarMensagem(`${analise.mensagem}\n\n${lista}`, 'bot');
+                            }
+                        } else {
+                            adicionarMensagem(`Você não tem nada registrado nesse período, ${nomeUsuario}!`, 'bot');
+                        }
+                    } else {
+                        // É só uma conversa normal (Bate-papo)
+                        adicionarMensagem(analise.mensagem, 'bot');
+                    }
+
+                } catch (err) { console.error(err); adicionarMensagem("⚠️ Ocorreu um erro no processamento.", "bot"); }
             }
         }
 
-        // 6. MICROFONE
+        // 6. MICROFONE (MANTIDO INTACTO)
         const btnMic = document.querySelector('.btn-mic');
         const inputMensagem = document.getElementById('message-input');
         const visualizador = document.getElementById('voice-visualizer');
@@ -485,7 +455,7 @@
             function resetarVisual() {
                 btnMic.textContent = '🎙️'; btnMic.style.color = '#9CA3AF';
                 visualizador.style.display = 'none'; inputMensagem.style.display = 'block';
-                inputMensagem.placeholder = 'Digite uma tarefa...'; estaOuvindo = false; bloqueioClique = false;
+                inputMensagem.placeholder = 'Converse comigo...'; estaOuvindo = false; bloqueioClique = false;
             }
 
             recognition.onstart = function () {

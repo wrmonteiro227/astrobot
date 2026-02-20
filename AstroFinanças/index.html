@@ -1,3 +1,4 @@
+﻿﻿
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,7 +7,7 @@
     <title>Astro Finanças | Seu Assistente Inteligente</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* MANTIVE TODO O SEU CSS ORIGINAL */
+        /* Reset e Configurações Globais */
         * {
             margin: 0;
             padding: 0;
@@ -15,7 +16,7 @@
         }
 
         body {
-            background-color: #0B0F19;
+            background-color: #0B0F19; /* Fundo escuro premium */
             color: #FFFFFF;
             display: flex;
             justify-content: center;
@@ -23,12 +24,13 @@
             min-height: 100vh;
         }
 
+        /* Container Principal do App */
         .app-container {
             width: 100%;
             max-width: 420px;
             height: 100vh;
             max-height: 850px;
-            background: #111827;
+            background: #111827; /* Fundo do card */
             display: flex;
             flex-direction: column;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -36,6 +38,7 @@
             overflow-y: auto;
         }
 
+        /* Topbar / Logo */
         .topbar {
             padding: 20px;
             text-align: center;
@@ -51,29 +54,32 @@
             letter-spacing: 1px;
         }
 
+        /* Hero Section (Apresentação Principal) */
         .hero {
             padding: 40px 20px 20px;
             text-align: center;
         }
 
+        /* Container da Imagem do Bot */
         .bot-avatar {
             width: 80px;
             height: 80px;
             background: linear-gradient(135deg, #3B82F6, #8B5CF6);
             border-radius: 20px;
             margin: 0 auto 20px;
-            overflow: hidden;
+            overflow: hidden; /* Corta as pontas da imagem nas bordas arredondadas */
             box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
             transform: rotate(-5deg);
             border: 2px solid rgba(255, 255, 255, 0.1);
         }
 
-        .bot-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
+            /* Imagem do Bot */
+            .bot-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover; /* Garante que a imagem preencha o quadrado sem deformar */
+                display: block;
+            }
 
         .title {
             font-size: 32px;
@@ -90,6 +96,7 @@
             padding: 0 10px;
         }
 
+        /* Grid de Vantagens */
         .features {
             padding: 20px;
             display: grid;
@@ -106,10 +113,10 @@
             transition: transform 0.3s ease;
         }
 
-        .feature-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.05);
-        }
+            .feature-card:hover {
+                transform: translateY(-5px);
+                background: rgba(255, 255, 255, 0.05);
+            }
 
         .feature-icon {
             font-size: 28px;
@@ -122,6 +129,7 @@
             font-weight: 400;
         }
 
+        /* Área de Assinatura (Checkout) */
         .checkout-section {
             margin-top: auto;
             padding: 30px 20px;
@@ -160,29 +168,10 @@
             transition: all 0.3s ease;
         }
 
-        .btn-subscribe:hover {
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
-            transform: scale(1.02);
-        }
-
-        /* NOVO CSS PARA O BOTÃO DE LOGIN */
-        .btn-login-link {
-            display: block;
-            margin-top: 20px;
-            color: #9CA3AF;
-            text-decoration: none;
-            font-size: 14px;
-            transition: 0.3s;
-        }
-
-        .btn-login-link span {
-            color: #60A5FA;
-            font-weight: 600;
-        }
-
-        .btn-login-link:hover {
-            color: #FFFFFF;
-        }
+            .btn-subscribe:hover {
+                box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+                transform: scale(1.02);
+            }
 
         .guarantee {
             font-size: 12px;
@@ -234,11 +223,7 @@
                 <span class="price">R$ 29,90</span>
                 <span class="price-period">/mês</span>
             </div>
-            
             <button class="btn-subscribe" onclick="window.location.href='registro.html'">Assine aqui</button>
-            
-            <a href="login.html" class="btn-login-link">Já é assinante? <span>Faça login</span></a>
-
             <div class="guarantee">
                 🔒 Pagamento 100% seguro via PIX ou Cartão
             </div>
