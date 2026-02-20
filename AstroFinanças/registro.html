@@ -1,257 +1,124 @@
-﻿﻿
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro | Criar Conta</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Astro | Cadastro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
-        }
-
-        body {
-            background-color: #0B0F19;
-            color: #FFFFFF;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 420px;
-            height: 100vh;
-            max-height: 850px;
-            background: #111827;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
-            overflow-y: auto;
-        }
-
-        .bot-avatar {
-            width: 90px;
-            height: 90px;
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            border-radius: 25px;
-            margin-bottom: 15px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
-            transform: rotate(-5deg);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-        }
-
-            .bot-avatar img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-
-        h1 {
-            font-size: 26px;
-            font-weight: 700;
-            margin-bottom: 5px;
-            text-align: center;
-        }
-
-        p {
-            font-size: 14px;
-            color: #9CA3AF;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .input-group {
-            width: 100%;
-            margin-bottom: 15px;
-        }
-
-            .input-group label {
-                display: block;
-                margin-bottom: 8px;
-                font-size: 14px;
-                color: #E5E7EB;
-            }
-
-        .input-field {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 15px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-            .input-field:focus {
-                border-color: #8B5CF6;
-            }
-
-        .btn-register {
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 18px;
-            border-radius: 30px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-
-            .btn-register:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
-            }
-
-        .login-link {
-            margin-top: 20px;
-            font-size: 14px;
-            color: #9CA3AF;
-            text-align: center;
-        }
-
-            .login-link a {
-                color: #8B5CF6;
-                text-decoration: none;
-                font-weight: 600;
-            }
-
-                .login-link a:hover {
-                    text-decoration: underline;
-                }
-
-        #mensagem-erro {
-            color: #EF4444;
-            font-size: 14px;
-            margin-top: 15px;
-            text-align: center;
-            display: none;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 400px; padding: 30px; background: #111827; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .logo-img { width: 70px; height: 70px; border-radius: 50%; margin-bottom: 15px; border: 2px solid #8B5CF6; object-fit: cover; }
+        h2 { margin-bottom: 5px; background: linear-gradient(135deg, #FFF, #9CA3AF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { color: #9CA3AF; font-size: 14px; margin-bottom: 25px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group input { width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline: none; font-size: 15px; text-align: center; transition: 0.3s; }
+        .input-group input:focus { border-color: #3B82F6; background: rgba(255,255,255,0.08); }
+        .btn-acao { width: 100%; padding: 15px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; font-size: 16px; transition: 0.3s; margin-top: 10px; }
+        .btn-acao:hover { transform: translateY(-2px); opacity: 0.9; }
+        .btn-acao:disabled { opacity: 0.5; cursor: not-allowed; }
+        #msg-status { color: #EF4444; font-size: 14px; margin-bottom: 15px; display: none; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2); }
+        
+        #area-pix { display: none; margin-top: 20px; }
+        .qr-code-box { background: white; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 15px; }
+        .qr-code-box img { width: 150px; height: 150px; }
+        .pix-copia-cola { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; color: #9CA3AF; font-size: 12px; word-break: break-all; margin-bottom: 15px; }
+        .btn-copiar { background: #10B981; margin-bottom: 10px; }
+        .btn-login-pix { background: transparent; border: 1px solid #3B82F6; color: #3B82F6; }
+        .link-rodape { color: #9CA3AF; text-decoration: none; font-size: 13px; display: block; margin-top: 20px; }
+        .link-rodape span { color: #3B82F6; font-weight: 600; }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <div class="bot-avatar">
-            <img src="https://files.catbox.moe/p862f1.png" alt="Logo Astro">
+    <div class="container">
+        <img src="https://files.catbox.moe/p862f1.png" class="logo-img" alt="Logo Astro">
+        
+        <div id="area-cadastro">
+            <h2>Crie sua Conta</h2>
+            <p>Preencha os dados para assinar</p>
+            
+            <div id="msg-status"></div>
+
+            <div class="input-group"><input type="text" id="reg_nome" placeholder="Seu Nome Completo"></div>
+            <div class="input-group"><input type="text" id="reg_tel" placeholder="WhatsApp (DDD + Número)"></div>
+            <div class="input-group"><input type="text" id="reg_cpf" placeholder="Seu CPF (Apenas números)"></div>
+
+            <button type="button" class="btn-acao" id="btn-cadastrar" onclick="cadastrar()">Gerar PIX - R$ 29,90</button>
+            <a href="login.html" class="link-rodape">Já tem uma conta? <span>Faça login</span></a>
         </div>
 
-        <h1>Crie sua conta</h1>
-        <p>Preencha os dados abaixo para ativar o Astro.</p>
-
-        <div class="input-group">
-            <label for="nome">Seu Nome</label>
-            <input type="text" id="nome" class="input-field" placeholder="Como quer ser chamado?">
-        </div>
-
-        <div class="input-group">
-            <label for="telefone">Seu WhatsApp (com DDD)</label>
-            <input type="tel" id="telefone" class="input-field" placeholder="Ex: 21999999999">
-        </div>
-
-        <button class="btn-register" onclick="criarConta()">Ativar e Começar</button>
-
-        <div id="mensagem-erro">Erro ao criar conta. Tente novamente.</div>
-
-        <div class="login-link">
-            Já tem uma assinatura? <a href="login.html">Faça login aqui</a>
+        <div id="area-pix">
+            <h2>Quase lá!</h2>
+            <p>Realize o pagamento para liberar seu acesso</p>
+            <div class="qr-code-box"><img id="img-qrcode" src="" alt="QR Code PIX"></div>
+            <div class="pix-copia-cola" id="texto-pix">Gerando código...</div>
+            <button class="btn-acao btn-copiar" onclick="copiarPix()">Copiar Código PIX</button>
+            <a href="login.html" style="text-decoration: none;"><button class="btn-acao btn-login-pix">Já paguei, ir para Login</button></a>
         </div>
     </div>
 
     <script>
-        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        const meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
+        const S_URL = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+        const supa = window.supabase.createClient(S_URL, S_KEY);
+        let codigoPixAtual = '';
 
-        async function criarConta() {
-            const nomeInput = document.getElementById('nome').value.trim();
-            const telefoneRaw = document.getElementById('telefone').value.trim();
-            const cpfRaw = document.getElementById('cpf').value.trim();
+        async function cadastrar() {
+            const nome = document.getElementById('reg_nome').value.trim();
+            const tel = document.getElementById('reg_tel').value.replace(/\D/g, '');
+            const cpf = document.getElementById('reg_cpf').value.replace(/\D/g, '');
+            const btn = document.getElementById('btn-cadastrar');
+            const msg = document.getElementById('msg-status');
 
-            const telefoneLimpo = telefoneRaw.replace(/\D/g, '');
-            const cpfLimpo = cpfRaw.replace(/\D/g, '');
-
-            const divErro = document.getElementById('mensagem-erro');
-            const btnRegister = document.querySelector('.btn-register');
-
-            if (nomeInput === '' || telefoneLimpo === '' || cpfLimpo === '') {
-                divErro.textContent = "Preencha todos os campos (incluindo o CPF válido).";
-                divErro.style.display = 'block';
-                return;
+            if (!nome || tel.length < 10 || cpf.length !== 11) {
+                msg.innerText = "Preencha todos os campos corretamente."; msg.style.display = "block"; return;
             }
 
-            btnRegister.textContent = "Gerando seu PIX...";
-            btnRegister.disabled = true;
-            divErro.style.display = 'none';
+            btn.disabled = true; btn.innerText = "Criando conta..."; msg.style.display = "none";
 
             try {
-                // 1. SALVA NO SUPABASE COMO BLOQUEADO
-                const { data, error } = await meuSupabase
-                    .from('clientes')
-                    .insert([{ nome: nomeInput, telefone: telefoneLimpo, assinatura_ativa: false }]);
-
-                if (error && error.code !== '23505') throw error;
-
-                // 2. CHAMA O SEU PRÓPRIO SERVIDOR (Adeus erro de CORS!)
-                const respostaVercel = await fetch('/api/gerar-pix', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        nome: nomeInput,
-                        cpf: cpfLimpo,
-                        telefone: telefoneLimpo
-                    })
-                });
-
-                const pixJson = await respostaVercel.json();
-
-                if (pixJson.qrcode) {
-                    // SUCECSO! Mostra o PIX Copia e Cola na tela
-                    document.getElementById('form-registro').style.display = 'none';
-                    document.getElementById('area-pix').style.display = 'block';
-                    document.getElementById('codigo-pix').value = pixJson.qrcode;
-                } else {
-                    throw new Error(pixJson.erro || "Erro ao comunicar com o servidor financeiro.");
+                const { data: userExiste } = await supa.from('clientes').select('id').eq('telefone', tel);
+                if (userExiste && userExiste.length > 0) {
+                    msg.innerText = "Número já cadastrado. Faça login."; msg.style.display = "block";
+                    btn.disabled = false; btn.innerText = "Gerar PIX - R$ 29,90"; return;
                 }
 
-            } catch (err) {
-                console.error(err);
-                divErro.textContent = err.message || "Sistema indisponível. Tente novamente.";
-                divErro.style.display = 'block';
-                btnRegister.textContent = "Assinar Astro (R$ 29,90)";
-                btnRegister.disabled = false;
+                const { error: erroBanco } = await supa.from('clientes').insert([{ 
+                    nome: nome, telefone: tel, cpf: cpf, assinatura_ativa: false 
+                }]);
+                if (erroBanco) throw erroBanco;
+
+                btn.innerText = "Gerando PIX...";
+                const resPix = await fetch('/api/gerar-pix', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, cpf })
+                });
+
+                if (!resPix.ok) throw new Error("Erro ao gerar o PIX");
+                const dadosPix = await resPix.json();
+                
+                document.getElementById('area-cadastro').style.display = 'none';
+                document.getElementById('area-pix').style.display = 'block';
+                document.getElementById('img-qrcode').src = "data:image/png;base64," + dadosPix.qr_code_base64;
+                codigoPixAtual = dadosPix.qrcode;
+                document.getElementById('texto-pix').innerText = codigoPixAtual;
+
+            } catch (erro) {
+                console.error(erro);
+                msg.innerText = "Erro no sistema. Tente novamente."; msg.style.display = "block";
+                btn.disabled = false; btn.innerText = "Gerar PIX - R$ 29,90";
             }
         }
 
         function copiarPix() {
-            const codigo = document.getElementById('codigo-pix');
-            codigo.select();
-            codigo.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(codigo.value);
-
-            const btn = document.querySelector('.btn-copiar');
-            btn.textContent = "✅ Código Copiado!";
-            setTimeout(() => btn.textContent = "📋 Copiar Código PIX", 2500);
+            navigator.clipboard.writeText(codigoPixAtual);
+            const btnCopiar = document.querySelector('.btn-copiar');
+            btnCopiar.innerText = "Copiado!"; btnCopiar.style.background = "#059669";
+            setTimeout(() => { btnCopiar.innerText = "Copiar Código PIX"; btnCopiar.style.background = "#10B981"; }, 3000);
         }
     </script>
 </body>
-
 </html>
