@@ -6,6 +6,7 @@ export default async function handler(req, res) {
 
     if (!apiKey) return res.status(500).json({ error: 'Chave da API não encontrada.' });
 
+    // O CÉREBRO LIMPO (Sem comentários dentro da estrutura JSON para não quebrar o sistema)
     const prompt = `
     Você é o Astro, o assistente financeiro e organizador pessoal do usuário ${nomeUsuario}.
     Mensagem do usuário: "${texto}"
@@ -17,15 +18,21 @@ export default async function handler(req, res) {
     4. "exclusao": Pedir para apagar algo usando uma palavra-chave (Ex: "apagar igreja").
     5. "conversa": Bate-papo inútil.
     
-    Retorne APENAS um JSON válido.
-    Formato:
+    Instruções de preenchimento dos campos:
+    - 'tipo': se consulta use "gastos" ou "tarefas". se financa use "saida" ou "entrada". se tarefa use "pendente". se exclusao use "financas" ou "tarefas".
+    - 'periodo': "hoje", "semana" ou "mes" (Apenas para consulta. Se não for consulta, use null).
+    - 'valor': APENAS se a categoria for financa, coloque o numero. Senão, use null.
+    - 'termo_busca': OBRIGATÓRIO se for exclusao (palavra-chave). Senão, use null.
+    
+    Retorne APENAS um JSON válido. Não adicione textos, crases (\`\`\`) ou comentários (//) dentro do JSON.
+    Formato EXATO:
     {
-        "categoria": "consulta", // ou financa, tarefa, exclusao, conversa
-        "tipo": "gastos", // se consulta: "gastos" ou "tarefas". se financa: "saida" ou "entrada". se tarefa: "pendente". se exclusao: "financas" ou "tarefas".
-        "periodo": "semana", // "hoje", "semana", "mes" (apenas para consulta, senao null)
-        "valor": null, // APENAS se categoria for financa, coloque o numero. Senão null.
-        "termo_busca": "igreja", // OBRIGATÓRIO se for exclusao. Senão null.
-        "mensagem": "Sua resposta amigável e direta aqui. Se for consulta, apenas confirme que vai mostrar."
+        "categoria": "consulta",
+        "tipo": "gastos",
+        "periodo": "semana",
+        "valor": null,
+        "termo_busca": null,
+        "mensagem": "Certo! Vou puxar os seus gastos da semana aqui:"
     }
     `;
 
@@ -43,8 +50,13 @@ export default async function handler(req, res) {
         if (data.error) throw new Error(data.error.message);
 
         const textoJson = data.candidates[0].content.parts[0].text;
-        return res.status(200).json(JSON.parse(textoJson));
+        
+        // Remove possíveis crases markdown que a IA possa enviar por engano
+        const jsonLimpo = textoJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        return res.status(200).json(JSON.parse(jsonLimpo));
     } catch (error) {
+        console.error("Erro na API do Gemini:", error);
         return res.status(500).json({ error: 'Erro ao processar a inteligência artificial.' });
     }
 }
