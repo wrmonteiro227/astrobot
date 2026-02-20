@@ -1,10 +1,15 @@
-export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ erro: 'Só aceita POST' });
+module.exports = async function(req, res) {
+    // 1. Verifica se é POST
+    if (req.method !== 'POST') {
+        return res.status(405).json({ erro: 'Só aceita POST' });
+    }
 
     const { texto, nomeUsuario } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey) return res.status(500).json({ error: 'Chave da API não encontrada.' });
+    if (!apiKey) {
+        return res.status(500).json({ error: 'Chave da API não encontrada na Vercel.' });
+    }
 
     const prompt = `
     Você é o Astro, o assistente financeiro e organizador pessoal do usuário ${nomeUsuario}.
@@ -47,7 +52,6 @@ export default async function handler(req, res) {
 
         const data = await resposta.json();
         
-        // SE O GOOGLE RECUSAR (COTA ESTOURADA, ETC), ELE VAI AVISAR AQUI:
         if (data.error) {
             throw new Error(`Google bloqueou: ${data.error.message}`);
         }
@@ -55,11 +59,9 @@ export default async function handler(req, res) {
         const textoJson = data.candidates[0].content.parts[0].text;
         const jsonLimpo = textoJson.replace(/```json/g, '').replace(/```/g, '').trim();
         
-        // SE A IA MANDAR UM JSON QUEBRADO, O ERRO VAI PULAR AQUI:
         return res.status(200).json(JSON.parse(jsonLimpo));
     } catch (error) {
         console.error("Erro detalhado:", error.message);
-        // O SITE VAI MOSTRAR EXATAMENTE O MOTIVO REAL NA SUA TELA:
         return res.status(500).json({ error: error.message });
     }
-}
+};
