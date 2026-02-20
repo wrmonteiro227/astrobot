@@ -6,7 +6,6 @@ export default async function handler(req, res) {
 
     if (!apiKey) return res.status(500).json({ error: 'Chave da API não encontrada.' });
 
-    // O CÉREBRO LIMPO (Sem comentários dentro da estrutura JSON para não quebrar o sistema)
     const prompt = `
     Você é o Astro, o assistente financeiro e organizador pessoal do usuário ${nomeUsuario}.
     Mensagem do usuário: "${texto}"
@@ -18,13 +17,13 @@ export default async function handler(req, res) {
     4. "exclusao": Pedir para apagar algo usando uma palavra-chave (Ex: "apagar igreja").
     5. "conversa": Bate-papo inútil.
     
-    Instruções de preenchimento dos campos:
+    Instruções de preenchimento:
     - 'tipo': se consulta use "gastos" ou "tarefas". se financa use "saida" ou "entrada". se tarefa use "pendente". se exclusao use "financas" ou "tarefas".
     - 'periodo': "hoje", "semana" ou "mes" (Apenas para consulta. Se não for consulta, use null).
     - 'valor': APENAS se a categoria for financa, coloque o numero. Senão, use null.
     - 'termo_busca': OBRIGATÓRIO se for exclusao (palavra-chave). Senão, use null.
     
-    Retorne APENAS um JSON válido. Não adicione textos, crases (\`\`\`) ou comentários (//) dentro do JSON.
+    Retorne APENAS um JSON válido. Não adicione textos, crases (\`\`\`) ou comentários dentro do JSON.
     Formato EXATO:
     {
         "categoria": "consulta",
@@ -47,16 +46,20 @@ export default async function handler(req, res) {
         });
 
         const data = await resposta.json();
-        if (data.error) throw new Error(data.error.message);
+        
+        // SE O GOOGLE RECUSAR (COTA ESTOURADA, ETC), ELE VAI AVISAR AQUI:
+        if (data.error) {
+            throw new Error(`Google bloqueou: ${data.error.message}`);
+        }
 
         const textoJson = data.candidates[0].content.parts[0].text;
-        
-        // Remove possíveis crases markdown que a IA possa enviar por engano
         const jsonLimpo = textoJson.replace(/```json/g, '').replace(/```/g, '').trim();
         
+        // SE A IA MANDAR UM JSON QUEBRADO, O ERRO VAI PULAR AQUI:
         return res.status(200).json(JSON.parse(jsonLimpo));
     } catch (error) {
-        console.error("Erro na API do Gemini:", error);
-        return res.status(500).json({ error: 'Erro ao processar a inteligência artificial.' });
+        console.error("Erro detalhado:", error.message);
+        // O SITE VAI MOSTRAR EXATAMENTE O MOTIVO REAL NA SUA TELA:
+        return res.status(500).json({ error: error.message });
     }
 }
