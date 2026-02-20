@@ -80,11 +80,10 @@
         let meuSupabase = null;
         try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
 
-        // O BLOCO DE MEMÓRIA (Guarda as últimas 6 mensagens)
         let historicoConversa = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas e posso te dar umas dicas de finanças. O que manda hoje? 🚀`;
+            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos e agora cobro até quem te deve dinheiro. O que manda hoje? 🚀`;
             adicionarMensagem(msgBoasVindas, 'bot');
         });
 
@@ -99,13 +98,9 @@
             chatMessages.appendChild(msg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            // Salva na memória curta se não for uma mensagem temporária
             if (id === null) {
                 historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
-                // Mantém apenas as últimas 6 mensagens para não sobrecarregar
-                if (historicoConversa.length > 6) {
-                    historicoConversa.shift();
-                }
+                if (historicoConversa.length > 6) historicoConversa.shift();
             }
 
             return msg;
@@ -172,7 +167,6 @@
                     const idCarregando = "msg-" + Date.now();
                     adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
 
-                    // AGORA ENVIAMOS O HISTÓRICO JUNTO COM O TEXTO!
                     const resAPI = await fetch('/api/cerebro', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -200,7 +194,7 @@
                     // EXECUÇÃO NO SUPABASE
                     if (analise.categoria === 'financa') {
                         if (analise.valor === null || analise.valor === undefined) {
-                            adicionarMensagem("Putz, entendi que é um registro, mas faltou me dizer o valor certinho. Pode mandar de novo com o número?", 'bot');
+                            adicionarMensagem("Putz, entendi que é sobre dinheiro, mas faltou me dizer o valor certinho. Pode mandar de novo com o número?", 'bot');
                             return;
                         }
                         const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
@@ -219,20 +213,30 @@
                         }
                         const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos') ? 'financas' : 'tarefas';
                         
-                        const { error } = await meuSupabase
-                            .from(tabela)
-                            .delete()
-                            .eq('cliente_id', idUsuario)
-                            .ilike('descricao', `%${analise.termo_busca}%`);
+                        const { error } = await meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
                             
                         if (error) adicionarMensagem(`⚠️ Erro ao apagar no banco: ${error.message}`, 'bot');
                         else adicionarMensagem(analise.mensagem, 'bot');
 
                     } else if (analise.categoria === 'consulta') {
-                        const tabela = analise.tipo === 'gastos' ? 'financas' : 'tarefas';
-                        const filtroStatus = analise.tipo === 'gastos' ? 'saida' : 'pendente';
+                        
+                        // NOVO SISTEMA DE FILTRO PARA ACHAR DÍVIDAS E GANHOS
+                        let tabela = 'tarefas';
+                        let filtroStatus = 'pendente';
 
-                        const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(tabela === 'financas' ? 'tipo' : 'status', filtroStatus);
+                        if (analise.tipo === 'gastos') {
+                            tabela = 'financas';
+                            filtroStatus = 'saida';
+                        } else if (analise.tipo === 'dividas') {
+                            tabela = 'financas';
+                            filtroStatus = 'divida';
+                        } else if (analise.tipo === 'entrada' || analise.tipo === 'ganhos') {
+                            tabela = 'financas';
+                            filtroStatus = 'entrada';
+                        }
+
+                        const colunaBusca = tabela === 'financas' ? 'tipo' : 'status';
+                        const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(colunaBusca, filtroStatus);
 
                         if (error) { adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'); return; }
 
@@ -249,10 +253,9 @@
                                 adicionarMensagem(`${analise.mensagem}\n\n${lista}`, 'bot');
                             }
                         } else {
-                            adicionarMensagem(`Você não tem nada registrado nesse período, ${nomeUsuario}! Pode ficar tranquilo. 😎`, 'bot');
+                            adicionarMensagem(`Não encontrei nada registrado nesse período, ${nomeUsuario}! Pode ficar tranquilo. 😎`, 'bot');
                         }
                     } else {
-                        // Resposta com a nova personalidade do Astro!
                         adicionarMensagem(analise.mensagem, 'bot');
                     }
 
@@ -263,7 +266,7 @@
             }
         }
 
-        // 6. MICROFONE
+        // MICROFONE
         const btnMic = document.querySelector('.btn-mic');
         const inputMensagem = document.getElementById('message-input');
         const visualizador = document.getElementById('voice-visualizer');
