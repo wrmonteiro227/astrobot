@@ -1,36 +1,20 @@
-﻿﻿
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro Finanças | Seu Assistente Inteligente</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Astro Finanças</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        /* Reset e Configurações Globais */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
-        }
-
-        body {
-            background-color: #0B0F19; /* Fundo escuro premium */
-            color: #FFFFFF;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        /* Container Principal do App */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
         .app-container {
             width: 100%;
             max-width: 420px;
             height: 100vh;
             max-height: 850px;
-            background: #111827; /* Fundo do card */
+            background: #111827;
             display: flex;
             flex-direction: column;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -38,197 +22,68 @@
             overflow-y: auto;
         }
 
-        /* Topbar / Logo */
-        .topbar {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .logo-text {
-            font-size: 20px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #60A5FA, #A78BFA);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 1px;
-        }
-
-        /* Hero Section (Apresentação Principal) */
-        .hero {
+        .hero-section {
             padding: 40px 20px 20px;
             text-align: center;
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
         }
 
-        /* Container da Imagem do Bot */
-        .bot-avatar {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            border-radius: 20px;
-            margin: 0 auto 20px;
-            overflow: hidden; /* Corta as pontas da imagem nas bordas arredondadas */
-            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
-            transform: rotate(-5deg);
-            border: 2px solid rgba(255, 255, 255, 0.1);
+        .bot-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #8B5CF6;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+            object-fit: cover;
         }
-
-            /* Imagem do Bot */
-            .bot-avatar img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover; /* Garante que a imagem preencha o quadrado sem deformar */
-                display: block;
-            }
 
         .title {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            line-height: 1.2;
-        }
-
-        .subtitle {
-            font-size: 16px;
-            color: #9CA3AF;
-            font-weight: 300;
-            line-height: 1.5;
-            padding: 0 10px;
-        }
-
-        /* Grid de Vantagens */
-        .features {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .feature-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 20px 15px;
-            border-radius: 16px;
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-            .feature-card:hover {
-                transform: translateY(-5px);
-                background: rgba(255, 255, 255, 0.05);
-            }
-
-        .feature-icon {
             font-size: 28px;
-            margin-bottom: 10px;
-        }
-
-        .feature-text {
-            font-size: 14px;
-            color: #E5E7EB;
-            font-weight: 400;
-        }
-
-        /* Área de Assinatura (Checkout) */
-        .checkout-section {
-            margin-top: auto;
-            padding: 30px 20px;
-            background: linear-gradient(180deg, rgba(17,24,39,0) 0%, rgba(17,24,39,1) 20%);
-            border-top: 1px solid rgba(255,255,255,0.05);
-            text-align: center;
-        }
-
-        .price-box {
-            margin-bottom: 20px;
-        }
-
-        .price {
-            font-size: 36px;
-            font-weight: 700;
-            color: #FFFFFF;
-        }
-
-        .price-period {
-            font-size: 16px;
-            color: #9CA3AF;
-            font-weight: 400;
-        }
-
-        .btn-subscribe {
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 18px;
-            border-radius: 30px;
-            font-size: 18px;
             font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
-            transition: all 0.3s ease;
+            margin-bottom: 5px;
+            background: linear-gradient(135deg, #FFF, #9CA3AF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-            .btn-subscribe:hover {
-                box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
-                transform: scale(1.02);
-            }
-
-        .guarantee {
-            font-size: 12px;
-            color: #6B7280;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
+        .subtitle { color: #9CA3AF; font-size: 15px; line-height: 1.5; margin-bottom: 25px; }
+        .features { padding: 0 25px; margin-bottom: 30px; display: flex; flex-direction: column; gap: 15px; }
+        .feature-item { display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); }
+        .feature-icon { font-size: 24px; }
+        .feature-text { font-size: 15px; color: #E5E7EB; }
+        .checkout-section { margin-top: auto; padding: 25px; background: rgba(17, 24, 39, 0.95); border-top: 1px solid rgba(255,255,255,0.05); text-align: center; }
+        .price { font-size: 32px; font-weight: 600; color: #FFFFFF; margin-bottom: 5px; }
+        .price span { font-size: 14px; color: #9CA3AF; font-weight: 400; }
+        
+        .btn-primary {
+            width: 100%; padding: 16px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; font-size: 16px; cursor: pointer; margin-top: 15px; margin-bottom: 15px; transition: 0.3s; text-decoration: none; display: inline-block; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
         }
+        .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; }
+        .link-login { color: #9CA3AF; text-decoration: none; font-size: 14px; display: block; }
+        .link-login span { color: #3B82F6; font-weight: 600; }
     </style>
 </head>
 <body>
-
     <div class="app-container">
-        <div class="topbar">
-            <span class="logo-text">ASTRO FINANÇAS</span>
-        </div>
-
-        <div class="hero">
-            <div class="bot-avatar">
-                <img src="https://files.catbox.moe/p862f1.png" alt="Logo Astro Finanças">
-            </div>
-            <h1 class="title">Sua rotina no piloto automático.</h1>
-            <p class="subtitle">O Astro é a inteligência artificial que organiza suas finanças e tarefas através de um simples chat.</p>
+        <div class="hero-section">
+            <img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot" class="bot-image">
+            <h1 class="title">Astro Finanças</h1>
+            <p class="subtitle">O seu assistente financeiro inteligente.</p>
         </div>
 
         <div class="features">
-            <div class="feature-card">
-                <div class="feature-icon">💸</div>
-                <div class="feature-text">Controle de Gastos e Receitas</div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">✅</div>
-                <div class="feature-text">Gestão de Tarefas Diárias</div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎙️</div>
-                <div class="feature-text">Entende Áudios e Textos</div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <div class="feature-text">Relatórios Automáticos</div>
-            </div>
+            <div class="feature-item"><span class="feature-icon">💰</span><span class="feature-text">Controle de Gastos</span></div>
+            <div class="feature-item"><span class="feature-icon">📋</span><span class="feature-text">Gestão de Tarefas</span></div>
+            <div class="feature-item"><span class="feature-icon">🎙️</span><span class="feature-text">Entende Áudios</span></div>
+            <div class="feature-item"><span class="feature-icon">📊</span><span class="feature-text">Relatórios Automáticos</span></div>
         </div>
 
         <div class="checkout-section">
-            <div class="price-box">
-                <span class="price">R$ 29,90</span>
-                <span class="price-period">/mês</span>
-            </div>
-            <button class="btn-subscribe" onclick="window.location.href='registro.html'">Assine aqui</button>
-            <div class="guarantee">
-                🔒 Pagamento 100% seguro via PIX ou Cartão
-            </div>
+            <div class="price">R$ 29,90 <span>/mês</span></div>
+            <a href="registro.html" class="btn-primary">Assine aqui</a>
+            <a href="login.html" class="link-login">Já é assinante? <span>Faça login</span></a>
         </div>
     </div>
-
 </body>
 </html>
