@@ -67,35 +67,28 @@
     </div>
 
     <script>
-        // 1. VERIFICA LOGIN
         const dadosBrutos = localStorage.getItem('astro_usuario_logado');
         let usuarioLogado = null;
         try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
-        
-        if (!usuarioLogado || !usuarioLogado.nome) { 
-            window.location.href = 'login.html'; 
-        }
+        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
         
         const nomeUsuario = usuarioLogado ? usuarioLogado.nome : 'Visitante';
         const idUsuario = usuarioLogado ? usuarioLogado.id : null;
 
-        // 2. CONFIGURAÇÃO SUPABASE
         const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         let meuSupabase = null;
-        try { 
-            if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); 
-        } catch (e) { 
-            console.error("Erro Supabase", e); 
-        }
+        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
+
+        // O BLOCO DE MEMÓRIA (Guarda as últimas 6 mensagens)
+        let historicoConversa = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            adicionarMensagem(`E aí, ${nomeUsuario}! Pode falar comigo naturalmente. O que manda hoje? 🚀`, 'bot');
+            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas e posso te dar umas dicas de finanças. O que manda hoje? 🚀`;
+            adicionarMensagem(msgBoasVindas, 'bot');
         });
 
-        function verificarEnter(event) { 
-            if (event.key === 'Enter') enviarMensagem(); 
-        }
+        function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
 
         function adicionarMensagem(texto, remetente, id = null) {
             const chatMessages = document.getElementById('chat-messages');
@@ -105,6 +98,16 @@
             msg.textContent = texto;
             chatMessages.appendChild(msg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Salva na memória curta se não for uma mensagem temporária
+            if (id === null) {
+                historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
+                // Mantém apenas as últimas 6 mensagens para não sobrecarregar
+                if (historicoConversa.length > 6) {
+                    historicoConversa.shift();
+                }
+            }
+
             return msg;
         }
          
@@ -131,7 +134,7 @@
                 let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // --- SISTEMA DE LIMPEZA BLINDADO (SEM GASTAR IA) ---
+                    // LIMPEZA LOCAL DE EMERGÊNCIA
                     if (aguardandoLimpeza) {
                         if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
@@ -155,27 +158,29 @@
                         setTimeout(() => adicionarMensagem(`⚠️ Você ativou a limpeza total!\nO que deseja apagar?\n- "Finanças"\n- "Tarefas"\n- "Cancelar"`, 'bot'), 400);
                         return;
                     }
-                    
                     if (textoTratado === 'limpar finanças' || textoTratado === 'limpar financas') {
                         await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
                         setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de finanças foi apagado com sucesso!`, 'bot'), 400);
                         return;
                     }
-                    
                     if (textoTratado === 'limpar tarefas') {
                         await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
                         setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de tarefas foi apagado com sucesso!`, 'bot'), 400);
                         return;
                     }
-                    // ---------------------------------------------------
 
                     const idCarregando = "msg-" + Date.now();
                     adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
 
+                    // AGORA ENVIAMOS O HISTÓRICO JUNTO COM O TEXTO!
                     const resAPI = await fetch('/api/cerebro', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ texto: texto, nomeUsuario: nomeUsuario })
+                        body: JSON.stringify({ 
+                            texto: texto, 
+                            nomeUsuario: nomeUsuario,
+                            historico: historicoConversa 
+                        })
                     });
 
                     document.getElementById(idCarregando).remove();
@@ -192,10 +197,10 @@
 
                     const analise = await resAPI.json();
 
-                    // --- EXECUÇÃO NO SUPABASE ---
+                    // EXECUÇÃO NO SUPABASE
                     if (analise.categoria === 'financa') {
                         if (analise.valor === null || analise.valor === undefined) {
-                            adicionarMensagem("Entendi que é um registro de finança, mas você não me disse o valor. Pode repetir o gasto com o valor em reais?", 'bot');
+                            adicionarMensagem("Putz, entendi que é um registro, mas faltou me dizer o valor certinho. Pode mandar de novo com o número?", 'bot');
                             return;
                         }
                         const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
@@ -244,9 +249,10 @@
                                 adicionarMensagem(`${analise.mensagem}\n\n${lista}`, 'bot');
                             }
                         } else {
-                            adicionarMensagem(`Você não tem nada registrado nesse período, ${nomeUsuario}!`, 'bot');
+                            adicionarMensagem(`Você não tem nada registrado nesse período, ${nomeUsuario}! Pode ficar tranquilo. 😎`, 'bot');
                         }
                     } else {
+                        // Resposta com a nova personalidade do Astro!
                         adicionarMensagem(analise.mensagem, 'bot');
                     }
 
