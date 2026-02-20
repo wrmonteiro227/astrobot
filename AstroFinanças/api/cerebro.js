@@ -1,42 +1,51 @@
 module.exports = async function(req, res) {
-    // 1. Verifica se é POST
     if (req.method !== 'POST') {
         return res.status(405).json({ erro: 'Só aceita POST' });
     }
 
-    const { texto, nomeUsuario } = req.body;
+    // Agora o cérebro recebe o histórico da conversa!
+    const { texto, nomeUsuario, historico = [] } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
         return res.status(500).json({ error: 'Chave da API não encontrada na Vercel.' });
     }
 
+    // Formata o histórico para a IA ler de forma clara
+    const historicoFormatado = historico.map(msg => `${msg.role === 'user' ? 'Usuário' : 'Astro'}: ${msg.content}`).join('\n');
+
     const prompt = `
-    Você é o Astro, o assistente financeiro e organizador pessoal do usuário ${nomeUsuario}.
-    Mensagem do usuário: "${texto}"
+    Você é o Astro, um assistente financeiro e organizador pessoal super inteligente, carismático e descolado do usuário ${nomeUsuario}.
+    Você fala de forma natural, amigável, usa emojis e dá conselhos ou dicas se o usuário quiser bater papo.
+
+    Histórico recente da conversa para você ter contexto:
+    ${historicoFormatado}
+
+    Mensagem ATUAL do usuário: "${texto}"
     
-    Classifique a mensagem em UMA das 5 categorias:
-    1. "consulta": O usuário está PERGUNTANDO sobre o passado ou pedindo para LER os dados. Palavras: "quanto", "quais", "mostre", "resumo". (Ex: "quanto gastei essa semana?", "o que tenho pra fazer?").
-    2. "tarefa": Anotar algo NOVO para fazer (Ex: "vou para a igreja").
-    3. "financa": Registrar um GASTO ou GANHO NOVO. A frase OBRIGATORIAMENTE tem um NÚMERO. (Ex: "gastei 50 reais"). ATENÇÃO: Se a frase for "quanto gastei", é "consulta" (gastos), NÃO é "financa".
-    4. "exclusao": Pedir para apagar algo usando uma palavra-chave (Ex: "apagar igreja").
-    5. "conversa": Bate-papo inútil.
+    Com base no histórico e na mensagem atual, classifique a intenção do usuário em UMA das 5 categorias:
+    1. "consulta": O usuário quer ver dados, extrato ou tarefas. (Ex: "quanto gastei?", "o que tenho pra fazer?").
+    2. "tarefa": Anotar uma NOVA tarefa. (Ex: "vou para a igreja").
+    3. "financa": Registrar um GASTO ou GANHO. Tem que ter um NÚMERO no contexto. (Ex: "gastei 50 reais").
+    4. "exclusao": Apagar algo. Precisa de uma palavra-chave. IMPORTANTE: Se o usuário disser "cancela isso", "apaga a última", olhe o HISTÓRICO acima para descobrir qual foi a última tarefa ou gasto e extraia a palavra-chave principal para colocar em 'termo_busca'.
+    5. "conversa": Bate-papo normal, dúvidas financeiras, conselhos, ou saudações. Seja super prestativo, humano e dê respostas completas!
     
-    Instruções de preenchimento:
-    - 'tipo': se consulta use "gastos" ou "tarefas". se financa use "saida" ou "entrada". se tarefa use "pendente". se exclusao use "financas" ou "tarefas".
-    - 'periodo': "hoje", "semana" ou "mes" (Apenas para consulta. Se não for consulta, use null).
-    - 'valor': APENAS se a categoria for financa, coloque o numero. Senão, use null.
-    - 'termo_busca': OBRIGATÓRIO se for exclusao (palavra-chave). Senão, use null.
+    Regras de preenchimento do JSON:
+    - 'tipo': consulta ("gastos" ou "tarefas"), financa ("saida" ou "entrada"), tarefa ("pendente"), exclusao ("financas" ou "tarefas").
+    - 'periodo': "hoje", "semana" ou "mes" (apenas para consulta).
+    - 'valor': Número do gasto/ganho (apenas para financa).
+    - 'termo_busca': A palavra-chave EXATA para deletar no banco de dados (exclusão).
+    - 'mensagem': Sua resposta final. Seja carismático, útil e aja como um parceiro do dia a dia.
     
-    Retorne APENAS um JSON válido. Não adicione textos, crases (\`\`\`) ou comentários dentro do JSON.
+    Retorne APENAS um JSON válido. Não adicione crases (\`\`\`) ou comentários.
     Formato EXATO:
     {
-        "categoria": "consulta",
-        "tipo": "gastos",
-        "periodo": "semana",
+        "categoria": "conversa",
+        "tipo": null,
+        "periodo": null,
         "valor": null,
         "termo_busca": null,
-        "mensagem": "Certo! Vou puxar os seus gastos da semana aqui:"
+        "mensagem": "Sua resposta com muita personalidade aqui!"
     }
     `;
 
