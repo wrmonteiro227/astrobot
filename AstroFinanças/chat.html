@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -103,7 +103,6 @@
             background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
         }
 
-        /* AQUI ESTÁ A CORREÇÃO DO CSS QUE FALTAVA (white-space: pre-wrap;) */
         .message {
             max-width: 80%;
             padding: 12px 16px;
@@ -214,7 +213,6 @@
                 background: linear-gradient(135deg, #2563EB, #7C3AED);
             }
 
-        /* --- ANIMAÇÃO DO MICROFONE --- */
         #voice-visualizer {
             flex-grow: 1;
             display: none;
@@ -231,41 +229,15 @@
             animation: sound 0ms -800ms linear infinite alternate;
         }
 
-            .bar:nth-child(1) {
-                height: 4px;
-                animation-duration: 474ms;
-            }
-
-            .bar:nth-child(2) {
-                height: 12px;
-                animation-duration: 433ms;
-            }
-
-            .bar:nth-child(3) {
-                height: 22px;
-                animation-duration: 407ms;
-            }
-
-            .bar:nth-child(4) {
-                height: 12px;
-                animation-duration: 458ms;
-            }
-
-            .bar:nth-child(5) {
-                height: 4px;
-                animation-duration: 400ms;
-            }
+            .bar:nth-child(1) { height: 4px; animation-duration: 474ms; }
+            .bar:nth-child(2) { height: 12px; animation-duration: 433ms; }
+            .bar:nth-child(3) { height: 22px; animation-duration: 407ms; }
+            .bar:nth-child(4) { height: 12px; animation-duration: 458ms; }
+            .bar:nth-child(5) { height: 4px; animation-duration: 400ms; }
 
         @keyframes sound {
-            0% {
-                opacity: 0.35;
-                height: 4px;
-            }
-
-            100% {
-                opacity: 1;
-                height: 22px;
-            }
+            0% { opacity: 0.35; height: 4px; }
+            100% { opacity: 1; height: 22px; }
         }
     </style>
 </head>
@@ -289,11 +261,7 @@
                 <input type="text" class="chat-input" id="message-input" placeholder="Digite uma tarefa..." onkeypress="verificarEnter(event)">
 
                 <div id="voice-visualizer">
-                    <div class="bar"></div>
-                    <div class="bar"></div>
-                    <div class="bar"></div>
-                    <div class="bar"></div>
-                    <div class="bar"></div>
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
                 </div>
 
                 <button class="action-btn btn-mic">🎙️</button>
@@ -305,24 +273,37 @@
     <script>
         // 1. VERIFICA QUEM ESTÁ LOGADO
         const dadosBrutos = localStorage.getItem('astro_usuario_logado');
-let usuarioLogado = null;
+        let usuarioLogado = null;
 
-try {
-    // Tenta ler o presente que o login enviou
-    usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null;
-} catch (e) {
-    console.error("Erro ao ler dados de login:", e);
-    usuarioLogado = null;
-}
+        try {
+            // Tenta ler o presente que o login enviou
+            usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null;
+        } catch (e) {
+            console.error("Erro ao ler dados de login:", e);
+            usuarioLogado = null;
+        }
 
-// Se não tiver ninguém logado, volta pro login sem conversa
-if (!usuarioLogado || !usuarioLogado.nome) {
-    window.location.href = 'login.html';
-}
+        // Se não tiver ninguém logado, volta pro login sem conversa
+        if (!usuarioLogado || !usuarioLogado.nome) {
+            window.location.href = 'login.html';
+        }
 
-// Define as variáveis que o resto do seu código já usa
-const nomeUsuario = usuarioLogado.nome;
-const idUsuario = usuarioLogado.id;
+        // Define as variáveis que o resto do seu código já usa
+        const nomeUsuario = usuarioLogado.nome;
+        const idUsuario = usuarioLogado.id;
+
+        // --- AQUI ESTÁ O BLOCO QUE FALTAVA ---
+        // 2. CONFIGURAÇÃO DO SUPABASE
+        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+        let meuSupabase = null;
+
+        try {
+            if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro);
+        } catch (erro) {
+            console.error("Erro ao iniciar o banco:", erro);
+        }
+        // -------------------------------------
 
         // 3. MENSAGEM DE BOAS-VINDAS
         document.addEventListener('DOMContentLoaded', () => {
@@ -407,7 +388,6 @@ const idUsuario = usuarioLogado.id;
                 try {
                     // --- SISTEMA DE LIMPEZA (CLEAR ALL) COM CONFIRMAÇÃO OBRIGATÓRIA ---
 
-                    // PASSO 2: O Astro está aguardando a resposta do usuário
                     if (aguardandoLimpeza) {
                         if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
                             const { error } = await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
@@ -429,14 +409,13 @@ const idUsuario = usuarioLogado.id;
                         }
                     }
 
-                    // PASSO 1: O usuário ativou a palavra-chave de perigo
                     if (textoTratado.includes('limpar') || textoTratado.includes('apagar')) {
-                        aguardandoLimpeza = true; // Trava o cérebro
+                        aguardandoLimpeza = true; 
                         setTimeout(() => adicionarMensagem(`⚠️ CUIDADO: Você ativou a limpeza de dados!\n\nO que você deseja limpar?\nResponda com:\n- "Finanças"\n- "Tarefas"\n- "Cancelar" (Para sair)`, 'bot'), 800);
                         return;
                     }
 
-                    // --- CONTINUAÇÃO NORMAL (Se não estiver limpando nada) ---
+                    // --- CONTINUAÇÃO NORMAL ---
                     const analise = analisarTexto(texto);
 
                     if (analise.categoria === 'consulta' && analise.tipo === 'gastos') {
@@ -527,9 +506,3 @@ const idUsuario = usuarioLogado.id;
     </script>
 </body>
 </html>
-
-
-
-
-
-
