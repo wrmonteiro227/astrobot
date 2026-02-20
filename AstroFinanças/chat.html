@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -320,17 +320,16 @@
         function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
 
         function adicionarMensagem(texto, remetente, id = null) {
-    const chatMessages = document.getElementById('chat-messages');
-    const msg = document.createElement('div');
-    
-    // CORREÇÃO: Usar className permite passar classes com espaços sem quebrar o JavaScript
-    msg.className = `message ${remetente}`; 
-    
-    if (id) msg.id = id;
-    msg.textContent = texto;
-    chatMessages.appendChild(msg);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    return msg;
+            const chatMessages = document.getElementById('chat-messages');
+            const msg = document.createElement('div');
+            
+            msg.className = `message ${remetente}`; 
+            
+            if (id) msg.id = id;
+            msg.textContent = texto;
+            chatMessages.appendChild(msg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return msg;
         }
          
         function obterDataFiltro(periodo) {
@@ -361,12 +360,12 @@
                         if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de finanças apagado com sucesso!`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`🗑️ Todo o histórico de finanças foi apagado com sucesso!`, 'bot'), 400);
                             return;
                         } else if (textoTratado.includes('tarefa')) {
                             await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado com sucesso!`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`🗑️ Todo o histórico de tarefas foi apagado com sucesso!`, 'bot'), 400);
                             return;
                         } else if (textoTratado.includes('cancelar') || textoTratado.includes('não')) {
                             aguardandoLimpeza = false;
@@ -375,13 +374,12 @@
                         }
                     }
 
-                    if (textoTratado === 'limpar' || textoTratado === 'apagar') {
+                    if (textoTratado === 'limpar tudo' || textoTratado === 'apagar tudo') {
                         aguardandoLimpeza = true;
-                        setTimeout(() => adicionarMensagem(`⚠️ Você ativou a limpeza!\nO que deseja apagar?\n- "Finanças"\n- "Tarefas"\n- "Cancelar"`, 'bot'), 400);
+                        setTimeout(() => adicionarMensagem(`⚠️ Você ativou a limpeza total!\nO que deseja apagar?\n- "Finanças"\n- "Tarefas"\n- "Cancelar"`, 'bot'), 400);
                         return;
                     }
 
-                    // --- O PULO DO GATO: CHAMADA DA INTELIGÊNCIA ARTIFICIAL ---
                     const idCarregando = "msg-" + Date.now();
                     adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
 
@@ -391,7 +389,6 @@
                         body: JSON.stringify({ texto: texto, nomeUsuario: nomeUsuario })
                     });
 
-                    // Remove a mensagem de "Astro está pensando"
                     document.getElementById(idCarregando).remove();
 
                     if (!resAPI.ok) {
@@ -412,8 +409,26 @@
                         if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
                         else adicionarMensagem(analise.mensagem, 'bot');
 
+                    // --- INÍCIO DA ADIÇÃO: A MÃO QUE APAGA ---
+                    } else if (analise.categoria === 'exclusao') {
+                        if (!analise.termo_busca) {
+                            adicionarMensagem(analise.mensagem, 'bot'); // Pede a palavra-chave se não encontrou
+                            return;
+                        }
+                        const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos') ? 'financas' : 'tarefas';
+                        
+                        // Executa o Delete no Supabase usando ILIKE para buscar a palavra-chave
+                        const { error } = await meuSupabase
+                            .from(tabela)
+                            .delete()
+                            .eq('cliente_id', idUsuario)
+                            .ilike('descricao', `%${analise.termo_busca}%`);
+                            
+                        if (error) adicionarMensagem(`⚠️ Erro ao apagar no banco: ${error.message}`, 'bot');
+                        else adicionarMensagem(analise.mensagem, 'bot');
+                    // --- FIM DA ADIÇÃO ---
+
                     } else if (analise.categoria === 'consulta') {
-                        // IA identificou que é uma consulta ao banco (Ex: "Quanto gastei hoje?")
                         const tabela = analise.tipo === 'gastos' ? 'financas' : 'tarefas';
                         const filtroStatus = analise.tipo === 'gastos' ? 'saida' : 'pendente';
 
@@ -478,5 +493,4 @@
         }
     </script>
 </body>
-
 </html>
