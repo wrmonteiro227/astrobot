@@ -1,51 +1,52 @@
 module.exports = async function(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ erro: 'Só aceita POST' });
-    }
+    if (req.method !== 'POST') return res.status(405).json({ erro: 'Só aceita POST' });
 
-    // Agora o cérebro recebe o histórico da conversa!
     const { texto, nomeUsuario, historico = [] } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
-        return res.status(500).json({ error: 'Chave da API não encontrada na Vercel.' });
-    }
+    if (!apiKey) return res.status(500).json({ error: 'Chave da API não encontrada na Vercel.' });
 
-    // Formata o histórico para a IA ler de forma clara
     const historicoFormatado = historico.map(msg => `${msg.role === 'user' ? 'Usuário' : 'Astro'}: ${msg.content}`).join('\n');
 
     const prompt = `
-    Você é o Astro, um assistente financeiro e organizador pessoal super inteligente, carismático e descolado do usuário ${nomeUsuario}.
-    Você fala de forma natural, amigável, usa emojis e dá conselhos ou dicas se o usuário quiser bater papo.
+    Você é o Astro, um assistente financeiro e organizador pessoal super inteligente e carismático do usuário ${nomeUsuario}.
 
-    Histórico recente da conversa para você ter contexto:
+    Histórico recente da conversa:
     ${historicoFormatado}
 
     Mensagem ATUAL do usuário: "${texto}"
     
-    Com base no histórico e na mensagem atual, classifique a intenção do usuário em UMA das 5 categorias:
-    1. "consulta": O usuário quer ver dados, extrato ou tarefas. (Ex: "quanto gastei?", "o que tenho pra fazer?").
-    2. "tarefa": Anotar uma NOVA tarefa. (Ex: "vou para a igreja").
-    3. "financa": Registrar um GASTO ou GANHO. Tem que ter um NÚMERO no contexto. (Ex: "gastei 50 reais").
-    4. "exclusao": Apagar algo. Precisa de uma palavra-chave. IMPORTANTE: Se o usuário disser "cancela isso", "apaga a última", olhe o HISTÓRICO acima para descobrir qual foi a última tarefa ou gasto e extraia a palavra-chave principal para colocar em 'termo_busca'.
-    5. "conversa": Bate-papo normal, dúvidas financeiras, conselhos, ou saudações. Seja super prestativo, humano e dê respostas completas!
+    Classifique a intenção do usuário em UMA das 5 categorias:
+    1. "consulta": O usuário quer ver o extrato. Pode ser gastos, ganhos, tarefas ou QUEM DEVE DINHEIRO. (Ex: "quem me deve?", "quanto gastei?", "o que recebi?").
+    2. "tarefa": Anotar uma NOVA tarefa (Ex: "ir no mercado").
+    3. "financa": Registrar dinheiro. 
+       - Se for GASTO: tipo "saida". (Ex: "gastei 50", "comprei uma blusa de 100").
+       - Se for PAGAMENTO RECEBIDO: tipo "entrada". (Ex: "João me pagou 100", "recebi 50 do pix").
+       - Se for DÍVIDA DE TERCEIROS: tipo "divida". (Ex: "João me deve 150", "falta o Marcos pagar 30").
+       OBRIGATÓRIO TER NÚMERO.
+    4. "exclusao": Apagar algo. Olhe o histórico se o usuário disser "cancela isso" ou "ele já pagou, apaga a divida".
+    5. "conversa": Bate-papo normal ou dúvidas.
     
     Regras de preenchimento do JSON:
-    - 'tipo': consulta ("gastos" ou "tarefas"), financa ("saida" ou "entrada"), tarefa ("pendente"), exclusao ("financas" ou "tarefas").
+    - 'tipo': 
+        Se consulta: "gastos", "tarefas", "dividas" ou "ganhos".
+        Se financa: "saida", "entrada" ou "divida".
+        Se tarefa: "pendente".
+        Se exclusao: "financas" ou "tarefas".
     - 'periodo': "hoje", "semana" ou "mes" (apenas para consulta).
-    - 'valor': Número do gasto/ganho (apenas para financa).
-    - 'termo_busca': A palavra-chave EXATA para deletar no banco de dados (exclusão).
-    - 'mensagem': Sua resposta final. Seja carismático, útil e aja como um parceiro do dia a dia.
+    - 'valor': Número extraído do texto (apenas se for financa). Ex: 150.
+    - 'termo_busca': Palavra-chave para deletar (apenas exclusão).
+    - 'mensagem': Sua resposta final. Use emojis, celebre quando entrar dinheiro e seja firme nas cobranças!
     
     Retorne APENAS um JSON válido. Não adicione crases (\`\`\`) ou comentários.
     Formato EXATO:
     {
-        "categoria": "conversa",
-        "tipo": null,
+        "categoria": "financa",
+        "tipo": "entrada",
         "periodo": null,
-        "valor": null,
+        "valor": 100,
         "termo_busca": null,
-        "mensagem": "Sua resposta com muita personalidade aqui!"
+        "mensagem": "Boa! Anotei aqui que o João te pagou R$ 100,00. Dinheiro no bolso! 🤑"
     }
     `;
 
@@ -60,10 +61,7 @@ module.exports = async function(req, res) {
         });
 
         const data = await resposta.json();
-        
-        if (data.error) {
-            throw new Error(`Google bloqueou: ${data.error.message}`);
-        }
+        if (data.error) throw new Error(`Google bloqueou: ${data.error.message}`);
 
         const textoJson = data.candidates[0].content.parts[0].text;
         const jsonLimpo = textoJson.replace(/```json/g, '').replace(/```/g, '').trim();
