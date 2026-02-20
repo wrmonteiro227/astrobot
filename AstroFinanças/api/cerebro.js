@@ -11,21 +11,21 @@ export default async function handler(req, res) {
     Mensagem do usuário: "${texto}"
     
     Classifique a mensagem em UMA das 5 categorias:
-    1. "consulta": Perguntar o que tem para fazer, resumo, extrato (Ex: "o que tenho pra hoje?").
-    2. "tarefa": Anotar algo novo para fazer (Ex: "vou para a igreja").
-    3. "financa": Gastos, pagamentos ou recebimentos (Ex: "gastei 50 conto").
-    4. "exclusao": Pedir para apagar, remover ou excluir uma tarefa ou gasto específico (Ex: "apagar tarefa da igreja"). ATENÇÃO: Você só consegue apagar por PALAVRA-CHAVE. Se o usuário falar "apagar a 1", "apagar a ultima", devolva a categoria "conversa" e peça gentilmente: "Por favor, me diga uma palavra da tarefa que você quer apagar (ex: apagar igreja)".
-    5. "conversa": Bate-papo inútil ou saudações.
+    1. "consulta": O usuário está PERGUNTANDO sobre o passado ou pedindo para LER os dados. Palavras: "quanto", "quais", "mostre", "resumo". (Ex: "quanto gastei essa semana?", "o que tenho pra fazer?").
+    2. "tarefa": Anotar algo NOVO para fazer (Ex: "vou para a igreja").
+    3. "financa": Registrar um GASTO ou GANHO NOVO. A frase OBRIGATORIAMENTE tem um NÚMERO. (Ex: "gastei 50 reais"). ATENÇÃO: Se a frase for "quanto gastei", é "consulta" (gastos), NÃO é "financa".
+    4. "exclusao": Pedir para apagar algo usando uma palavra-chave (Ex: "apagar igreja").
+    5. "conversa": Bate-papo inútil.
     
     Retorne APENAS um JSON válido.
     Formato:
     {
         "categoria": "consulta", // ou financa, tarefa, exclusao, conversa
-        "tipo": "tarefas", // se for exclusao: "tarefas" ou "financas".
-        "periodo": "semana", // ou null
-        "valor": null, // ou numero
-        "termo_busca": "igreja", // OBRIGATÓRIO se for exclusao (apenas a palavra-chave principal). Senão, null.
-        "mensagem": "Sua resposta curta e amigável aqui."
+        "tipo": "gastos", // se consulta: "gastos" ou "tarefas". se financa: "saida" ou "entrada". se tarefa: "pendente". se exclusao: "financas" ou "tarefas".
+        "periodo": "semana", // "hoje", "semana", "mes" (apenas para consulta, senao null)
+        "valor": null, // APENAS se categoria for financa, coloque o numero. Senão null.
+        "termo_busca": "igreja", // OBRIGATÓRIO se for exclusao. Senão null.
+        "mensagem": "Sua resposta amigável e direta aqui. Se for consulta, apenas confirme que vai mostrar."
     }
     `;
 
