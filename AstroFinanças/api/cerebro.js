@@ -15,7 +15,7 @@ module.exports = async function(req, res) {
     const valor = matchNumero ? parseFloat(matchNumero[0].replace(',', '.')) : null;
 
     let textoBase = texto.toLowerCase()
-        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|r\$|reais|exagerei|acho otimo|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|lembrete|me|de|fazer|guardei|guardar|poupei|economizei|come[çc]arei|proxima|semana|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta)\b/g, ' ');
+        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|r\$|reais|exagerei|acho otimo|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|lembrete|me|de|fazer|guardei|guardar|poupei|economizei|come[çc]arei|proxima|semana|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta|oque|o que|tenho)\b/g, ' ');
 
     let descFinanca = textoBase.replace(/\d+(?:[.,]\d+)?/g, '').replace(/\s+/g, ' ').trim();
     let descTarefa = textoBase.replace(/\s+/g, ' ').trim(); 
@@ -30,6 +30,15 @@ module.exports = async function(req, res) {
         categoria: "conversa", tipo: null, periodo: null, valor: null, termo_busca: null, descricao_limpa: null,
         mensagem: `Opa, parceiro! Sobre esse assunto eu não vou conseguir te ajudar. Minha missão aqui é única: tirar o peso das suas costas e organizar as finanças, reservas e tarefas que sobrecarregam o seu dia a dia. Manda aí um gasto, um ganho, um valor guardado ou um lembrete pra gente focar no que importa! 🚀💼`
     };
+
+    // 1. CORREÇÃO DA LIMPEZA: EXIGE APENAS A PALAVRA
+    if (frase.startsWith("apagar ") || frase.startsWith("limpar ") || frase.includes("apagar tudo") || frase.includes("limpar tudo")) {
+        // Se a pessoa digitou "apagar [alguma coisa]", ele avisa
+        if (frase !== "apagar" && frase !== "limpar" && frase !== "apagar tudo" && frase !== "limpar tudo") {
+            resposta = { categoria: "conversa", mensagem: `⚠️ Para iniciar a limpeza do sistema de forma segura, me envie somente a palavra "limpar" ou "apagar" para que eu possa lhe enviar as opções do que pode ser apagado.` };
+            return res.status(200).json(resposta);
+        }
+    }
 
     let matchQuantoDeve = frase.match(/quanto\s+([a-zãõáéíóúç\s]+)\s+me\s+deve/);
     if (matchQuantoDeve) {
@@ -52,8 +61,8 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // CONSULTAS: "DEPOSITEI" AGORA FAZ PARTE DO COFRE
-    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo")) {
+    // 2. CORREÇÃO DAS TAREFAS: ADICIONADO "O QUE TENHO" E "OQUE TENHO"
+    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo") || frase.includes("oque tenho") || frase.includes("o que tenho")) {
         resposta.categoria = "consulta";
         resposta.periodo = frase.includes("semana") ? "semana" : frase.includes("mes") ? "mes" : "hoje";
         
@@ -71,14 +80,6 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    if (frase.includes("apagar") || frase.includes("cancelar") || frase.includes("excluir")) {
-        let partes = frase.split(" ");
-        let termo = partes[partes.length - 1]; 
-        resposta = { categoria: "exclusao", tipo: "financas", termo_busca: termo, mensagem: `Apaguei tudo de "${termo}". 🗑️` };
-        return res.status(200).json(resposta);
-    }
-
-    // REGISTROS: "DEPOSITEI" AGORA GUARDA NO COFRE
     if (frase.includes("guardei") || frase.includes("guardar") || frase.includes("poupei") || frase.includes("economizei") || frase.includes("cofre") || frase.includes("juntei") || frase.includes("juntar") || frase.includes("deposit")) {
         if (valor) {
             resposta = { categoria: "financa", tipo: "reserva", valor: valor, descricao_limpa: descFinanca, mensagem: sortearMsg(msgPoupanca, valor) };
