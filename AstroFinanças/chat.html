@@ -107,14 +107,26 @@
                 document.getElementById(idTemp).remove();
 
                 if (analise.categoria === 'financa') {
-                    // Usa a descrição limpa que a IA gera
                     await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, tipo: analise.tipo, valor: analise.valor }]);
                     adicionarMensagem(analise.mensagem, 'bot');
+                } else if (analise.categoria === 'tarefa') {
+                    // ADICIONADO: Tratamento para tarefas não financeiras (ex: lembretes, futebol)
+                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: 'pendente' }]);
+                    adicionarMensagem(analise.mensagem, 'bot');
+                } else if (analise.categoria === 'exclusao') {
+                    // ADICIONADO: Tratamento para os comandos de Limpar/Apagar
+                    const tabela = analise.tipo === 'tarefas' ? 'tarefas' : 'financas';
+                    if (analise.termo_busca) {
+                         const { error } = await meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
+                         if(error) adicionarMensagem(`⚠️ Erro ao limpar: ${error.message}`, 'bot');
+                         else adicionarMensagem(analise.mensagem, 'bot');
+                    } else {
+                        adicionarMensagem(analise.mensagem, 'bot');
+                    }
                 } else if (analise.categoria === 'consulta') {
                     const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
                     let query = meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
                     
-                    // FILTRO DE CATEGORIAS
                     if (analise.tipo === 'gastos') query = query.eq('tipo', 'saida');
                     else if (analise.tipo === 'entrada') query = query.eq('tipo', 'entrada');
                     else if (analise.tipo === 'reserva') query = query.eq('tipo', 'reserva');
@@ -124,11 +136,16 @@
                     if(data && data.length > 0) {
                         let total = 0, extrato = '';
                         data.forEach(it => {
-                            total += it.valor || 0;
-                            const ico = it.tipo === 'entrada' ? '✅' : it.tipo === 'reserva' ? '🔒' : it.tipo === 'divida' ? '💸' : '📉';
-                            extrato += `${ico} R$ ${it.valor.toFixed(2)} - ${it.descricao}\n`;
+                            if(tabela === 'financas') {
+                                total += it.valor || 0;
+                                const ico = it.tipo === 'entrada' ? '✅' : it.tipo === 'reserva' ? '🔒' : it.tipo === 'divida' ? '💸' : '📉';
+                                extrato += `${ico} R$ ${it.valor.toFixed(2)} - ${it.descricao}\n`;
+                            } else {
+                                extrato += `🎯 ${it.descricao}\n`;
+                            }
                         });
-                        adicionarMensagem(`${analise.mensagem}\n\n${extrato}\nTotal: R$ ${total.toFixed(2)}`, 'bot');
+                        if(tabela === 'financas') adicionarMensagem(`${analise.mensagem}\n\n${extrato}\nTotal: R$ ${total.toFixed(2)}`, 'bot');
+                        else adicionarMensagem(`${analise.mensagem}\n\n${extrato}`, 'bot');
                     } else {
                         adicionarMensagem(`Não encontrei nada de ${analise.tipo} por aqui, ${nomeUsuario}.`, 'bot');
                     }
@@ -138,15 +155,14 @@
             } catch (e) { document.getElementById(idTemp).textContent = "Erro na conexão."; }
         }
 
-        // MICROFONE ORIGINAL
         const btnMic = document.querySelector('.btn-mic');
         const visualizador = document.getElementById('voice-visualizer');
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition(); recognition.lang = 'pt-BR';
-            btnMic.onclick = () => { recognition.start(); visualizador.style.display = 'flex'; input.style.display = 'none'; };
-            recognition.onresult = (e) => { input.value = e.results[0][0].transcript; enviarMensagem(); };
-            recognition.onend = () => { visualizador.style.display = 'none'; input.style.display = 'block'; };
+            btnMic.onclick = () => { recognition.start(); visualizador.style.display = 'flex'; document.getElementById('message-input').style.display = 'none'; };
+            recognition.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; enviarMensagem(); };
+            recognition.onend = () => { visualizador.style.display = 'none'; document.getElementById('message-input').style.display = 'block'; };
         }
     </script>
 </body>
