@@ -171,7 +171,7 @@
 
                     const analise = await resAPI.json();
 
-                    // --- SALVAMENTO E CONSULTA ---
+                    // --- SALVAMENTO ---
                     if (analise.categoria === 'financa') {
                         if (analise.valor === null) {
                             adicionarMensagem("Faltou o valor. Pode mandar o número?", 'bot');
@@ -194,6 +194,7 @@
                         if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
                         else adicionarMensagem(analise.mensagem, 'bot');
 
+                    // --- CONSULTA CORRIGIDA ---
                     } else if (analise.categoria === 'consulta') {
                         let tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
                         let query = meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
@@ -201,7 +202,7 @@
                         if (analise.tipo === 'gastos') query = query.eq('tipo', 'saida');
                         else if (analise.tipo === 'dividas') query = query.eq('tipo', 'divida');
                         else if (analise.tipo === 'entrada') query = query.eq('tipo', 'entrada');
-                        else if (analise.tipo === 'reserva') query = query.eq('tipo', 'reserva'); // <--- COFRE
+                        else if (analise.tipo === 'reserva') query = query.eq('tipo', 'reserva'); 
                         
                         if (analise.termo_busca) query = query.ilike('descricao', `%${analise.termo_busca}%`);
 
@@ -216,7 +217,8 @@
                                 let total = 0; let extrato = '';
                                 itensValidos.forEach(item => { 
                                     total += item.valor; 
-                                    extrato += `• R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`; 
+                                    let icone = item.tipo === 'entrada' ? '✅' : item.tipo === 'reserva' ? '🔒' : '📉';
+                                    extrato += `${icone} R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`; 
                                 });
                                 adicionarMensagem(`${analise.mensagem}\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)}`, 'bot');
                             } else {
@@ -224,7 +226,7 @@
                                 adicionarMensagem(`${analise.mensagem}\n\n${lista}`, 'bot');
                             }
                         } else {
-                            adicionarMensagem(`Não encontrei nada sobre isso no sistema, ${nomeUsuario}. 😎`, 'bot');
+                            adicionarMensagem(`Não encontrei registros de ${analise.tipo} nesse período, ${nomeUsuario}. 😎`, 'bot');
                         }
                     } else {
                         adicionarMensagem(analise.mensagem, 'bot');
@@ -237,7 +239,7 @@
             }
         }
 
-        // MICROFONE (SEM ALTERAÇÕES)
+        // MICROFONE
         const btnMic = document.querySelector('.btn-mic');
         const inputMensagem = document.getElementById('message-input');
         const visualizador = document.getElementById('voice-visualizer');
