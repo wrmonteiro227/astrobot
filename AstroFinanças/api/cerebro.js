@@ -2,12 +2,10 @@ module.exports = async function(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ erro: 'Só aceita POST' });
 
     const { texto, nomeUsuario } = req.body;
-    
-    // Deixa tudo minúsculo e tira os acentos básicos para o robô não se confundir
     const frase = texto.toLowerCase().trim();
 
     // ==========================================
-    // 1. O MOTOR DE CARISMA (Respostas Sorteadas)
+    // 1. O MOTOR DE CARISMA
     // ==========================================
     const msgGastos = [
         `Anotado, chefe! R$ {valor} indo embora. Tem que controlar, hein? 💸`,
@@ -25,13 +23,11 @@ module.exports = async function(req, res) {
         `Memória de elefante aqui. Tarefa registrada com sucesso! 🐘`
     ];
 
-    // Função que escolhe uma frase aleatória e injeta o valor do dinheiro
     function sortearMsg(array, valor) {
         const msg = array[Math.floor(Math.random() * array.length)];
         return msg.replace('{valor}', valor);
     }
 
-    // Tenta caçar qualquer número na frase do usuário
     const matchNumero = frase.match(/\d+(?:[.,]\d+)?/);
     const valor = matchNumero ? parseFloat(matchNumero[0].replace(',', '.')) : null;
 
@@ -41,28 +37,25 @@ module.exports = async function(req, res) {
     };
 
     // ==========================================
-    // 2. O CÉREBRO LÓGICO (CAÇADOR DE INTENÇÕES)
+    // 2. O CÉREBRO LÓGICO
     // ==========================================
 
-    // A) QUANDO O DEVEDOR PAGA A DÍVIDA (ex: "o junior me pagou")
+    // A) PAGAMENTO DE DÍVIDA
     let matchPagou = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+pagou/);
     if (matchPagou) {
-        // Tira as palavras "o" ou "a" pra pegar só o nome limpo
         let nomeDevedor = matchPagou[1].replace(/\b(o|a|que)\b/g, '').trim(); 
         resposta.categoria = "exclusao";
         resposta.tipo = "financas";
-        resposta.termo_busca = nomeDevedor; // Manda pro banco apagar quem tiver esse nome
+        resposta.termo_busca = nomeDevedor;
         resposta.mensagem = `Justo! O ${nomeDevedor} honrou o compromisso. Já risquei a dívida dele do caderninho! 🤝`;
         return res.status(200).json(resposta);
     }
 
-    // B) REGISTRANDO NOVA DÍVIDA (ex: "junior me deve 50 para sabado")
+    // B) NOVA DÍVIDA
     let matchDeve = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+deve/);
     if (matchDeve && valor) {
         let nomeDevedor = matchDeve[1].replace(/\b(o|a)\b/g, '').trim();
         let dataVencimento = "";
-        
-        // Caça se tem prazo na frase
         let matchData = frase.match(/(?:para|ate|no|na)\s+([a-z0-9\s]+)$/);
         if (matchData) dataVencimento = ` (Prazo: ${matchData[1].trim()})`;
 
@@ -73,7 +66,7 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // C) CONSULTAS (Ver extratos e quem deve)
+    // C) CONSULTAS
     if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo")) {
         resposta.categoria = "consulta";
         if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida")) {
@@ -93,17 +86,17 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // D) EXCLUSÃO DIRETA (ex: "apagar igreja")
+    // D) EXCLUSÃO DIRETA
     if (frase.includes("apagar") || frase.includes("cancelar") || frase.includes("excluir")) {
         resposta.categoria = "exclusao";
         resposta.tipo = "financas";
         let partes = frase.split(" ");
-        resposta.termo_busca = partes[partes.length - 1]; // Pega a última palavra
+        resposta.termo_busca = partes[partes.length - 1]; 
         resposta.mensagem = `Feito, meu parceiro! Apaguei tudo que encontrei com o nome "${resposta.termo_busca}". 🗑️`;
         return res.status(200).json(resposta);
     }
 
-    // E) ENTRADAS / LUCRO
+    // E) ENTRADAS
     if (frase.includes("recebi") || frase.includes("ganhei") || frase.includes("entrou") || frase.includes("vendi") || frase.includes("lucro")) {
         resposta.categoria = "financa";
         resposta.tipo = "entrada";
@@ -112,7 +105,7 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // F) SAÍDAS / GASTOS
+    // F) SAÍDAS
     if (frase.includes("gastei") || frase.includes("comprei") || frase.includes("paguei") || frase.includes("custou") || frase.includes("saiu")) {
         resposta.categoria = "financa";
         resposta.tipo = "saida";
@@ -121,7 +114,15 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // G) TAREFAS
+    // G) LEMBRETES E CONTAS A PAGAR (Nova Habilidade!)
+    if ((frase.includes("pagar") && !valor) || frase.includes("dia de") || frase.includes("tenho que")) {
+        resposta.categoria = "tarefa";
+        resposta.tipo = "pendente";
+        resposta.mensagem = `Anotado na agenda, chefe! Não vou deixar você dar calote. Lembrete salvo nas tarefas pra não esquecer! 🗓️💸`;
+        return res.status(200).json(resposta);
+    }
+
+    // H) TAREFAS NORMAIS
     if (frase.includes("vou") || frase.includes("preciso") || frase.includes("lembrar") || frase.includes("tarefa")) {
         resposta.categoria = "tarefa";
         resposta.tipo = "pendente";
@@ -129,7 +130,6 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // Simula que a IA está "pensando" (dá aquele toque humano pro site não responder tão rápido que pareça irreal)
     await new Promise(resolve => setTimeout(resolve, 600));
 
     return res.status(200).json(resposta);
