@@ -8,22 +8,34 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         body { background-color: #0B0F19; color: #FFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .app-container { width: 100%; max-width: 420px; height: 100vh; background: #111827; display: flex; flex-direction: column; }
-        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { max-width: 85%; padding: 12px; border-radius: 15px; font-size: 15px; }
-        .bot { align-self: flex-start; background: #1F2937; }
-        .user { align-self: flex-end; background: #3B82F6; }
-        .chat-input-area { padding: 15px; background: #111827; border-top: 1px solid #1F2937; display: flex; gap: 10px; }
-        input { flex-grow: 1; background: #1F2937; border: none; color: #FFF; padding: 12px; border-radius: 10px; outline: none; }
-        button { background: #3B82F6; border: none; color: #FFF; padding: 10px 15px; border-radius: 10px; cursor: pointer; }
+        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; }
+        .header-avatar { width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; }
+        .user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border-bottom-right-radius: 4px; }
+        .chat-input-area { padding: 15px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: center; }
+        .input-wrapper { flex-grow: 1; display: flex; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); height: 45px; }
+        input { width: 100%; background: transparent; border: none; color: #FFF; outline: none; }
+        .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; color: #FFF; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="app-container">
+        <header class="chat-header">
+            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png"></div>
+            <div><p style="font-weight:600">Astro Inteligente</p><p style="font-size:12px;color:#10B981">● Online</p></div>
+        </header>
         <main class="chat-messages" id="chat-messages"></main>
         <footer class="chat-input-area">
-            <input type="text" id="message-input" placeholder="Digite aqui..." onkeypress="if(event.key==='Enter')enviar()">
-            <button onclick="enviar()">➤</button>
+            <div class="input-wrapper">
+                <input type="text" id="message-input" placeholder="O que vamos organizar?" onkeypress="if(event.key==='Enter')enviar()">
+                <button style="background:none;border:none;cursor:pointer" id="btn-mic">🎙️</button>
+            </div>
+            <button class="btn-send" onclick="enviar()">➤</button>
         </footer>
     </div>
     <script>
@@ -40,26 +52,40 @@
             const i = document.getElementById('message-input'); const txt = i.value.trim();
             if(!txt) return; addMsg(txt, 'user'); i.value = '';
             
-            const res = await fetch('/api/cerebro', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({texto: txt, nomeUsuario: user.nome}) });
-            const data = await res.json();
+            try {
+                const res = await fetch('/api/cerebro', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({texto: txt, nomeUsuario: user.nome}) });
+                const analise = await res.json();
 
-            if (data.categoria === 'financa') {
-                await supabase.from('financas').insert([{ cliente_id: user.id, descricao: data.descricao_limpa, tipo: data.tipo, valor: data.valor }]);
-                addMsg(data.mensagem, 'bot');
-            } else if (data.categoria === 'consulta') {
-                let q = supabase.from('financas').select('*').eq('cliente_id', user.id);
-                if(data.tipo === 'entrada') q = q.eq('tipo', 'entrada');
-                else if(data.tipo === 'reserva') q = q.eq('tipo', 'reserva');
-                else if(data.tipo === 'gastos') q = q.eq('tipo', 'saida');
+                if (analise.categoria === 'financa') {
+                    await supabase.from('financas').insert([{ cliente_id: user.id, descricao: analise.descricao_limpa, tipo: analise.tipo, valor: analise.valor }]);
+                    addMsg(analise.mensagem, 'bot');
+                } else if (analise.categoria === 'consulta') {
+                    let q = supabase.from('financas').select('*').eq('cliente_id', user.id);
+                    if(analise.tipo === 'entrada') q = q.eq('tipo', 'entrada');
+                    else if(analise.tipo === 'reserva') q = q.eq('tipo', 'reserva');
+                    else if(analise.tipo === 'gastos') q = q.eq('tipo', 'saida');
 
-                const { data: itens } = await q;
-                if(itens && itens.length > 0) {
-                    let t = 0; let lista = itens.map(it => { t += it.valor; return `• R$ ${it.valor.toFixed(2)} - ${it.descricao}`; }).join('\n');
-                    addMsg(`${data.mensagem}\n\n${lista}\nTotal: R$ ${t.toFixed(2)}`, 'bot');
-                } else { addMsg("Nada encontrado.", 'bot'); }
-            } else { addMsg(data.mensagem, 'bot'); }
+                    const { data } = await q;
+                    if(data && data.length > 0) {
+                        let t = 0; 
+                        let lista = data.map(it => { 
+                            t += it.valor; 
+                            const ico = it.tipo === 'entrada' ? '✅' : it.tipo === 'reserva' ? '🔒' : '📉';
+                            return `${ico} R$ ${it.valor.toFixed(2)} - ${it.descricao}`; 
+                        }).join('\n');
+                        addMsg(`Resumo de ${analise.tipo}:\n\n${lista}\nTotal: R$ ${t.toFixed(2)}`, 'bot');
+                    } else { addMsg(`Nenhum registro de ${analise.tipo} encontrado.`, 'bot'); }
+                } else { addMsg(analise.mensagem, 'bot'); }
+            } catch (e) { addMsg("Erro na conexão.", "bot"); }
         }
-        addMsg(`Olá, ${user.nome}! Como posso ajudar?`, 'bot');
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const rec = new SpeechRecognition(); rec.lang = 'pt-BR';
+            document.getElementById('btn-mic').onclick = () => rec.start();
+            rec.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; enviar(); };
+        }
+        addMsg(`Olá, ${user.nome}! O que vamos organizar hoje?`, 'bot');
     </script>
 </body>
 </html>
