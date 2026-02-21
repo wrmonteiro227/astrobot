@@ -1,136 +1,74 @@
 module.exports = async function(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ erro: 'Só aceita POST' });
+    if (req.method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
 
     const { texto, nomeUsuario } = req.body;
     const frase = texto.toLowerCase().trim();
 
-    // ==========================================
-    // 1. O MOTOR DE CARISMA
-    // ==========================================
-    const msgGastos = [
-        `Anotado, chefe! R$ {valor} indo embora. Tem que controlar, hein? 💸`,
-        `Gasto de R$ {valor} registrado. Doendo no bolso, mas tá salvo! 📉`,
-        `Lá se vai R$ {valor}... Tá no sistema! 📝`
-    ];
-    const msgGanhos = [
-        `Boa, ${nomeUsuario}! R$ {valor} na conta. O pai tá on! 🤑`,
-        `Foguete não tem ré! R$ {valor} registrado nas entradas. 🚀`,
-        `Dinheiro no bolso! Mais R$ {valor} pra conta do chefe. 💰`
-    ];
-    const msgTarefas = [
-        `Missão dada é missão cumprida. Anotei na sua lista! 🫡`,
-        `Deixa comigo, ${nomeUsuario}. Tá salvo nas tarefas! ✅`,
-        `Memória de elefante aqui. Tarefa registrada com sucesso! 🐘`
-    ];
+    // Sorteador de Carisma do Astro
+    const msgGastos = [`Anotado, ${nomeUsuario}! R$ {valor} indo embora. 👀💸`, `Gasto de R$ {valor} registrado. Olho no orçamento! 📉`];
+    const msgGanhos = [`Boa, chefe! R$ {valor} na conta. O pai tá on! 🤑`, `Dinheiro no bolso! Mais R$ {valor} pra conta. 💰🚀`];
+    const msgTarefas = [`Irei registrar isso no seu histórico! Missão dada é missão cumprida. 🫡`, `Pode deixar, já anotei na sua agenda! ✅`];
+    const msgPoupanca = [`Aí sim! R$ {valor} guardados no cofre. Estamos mais perto do objetivo! 💰🔒`, `Pega a visão: quem guarda, tem! Mais R$ {valor} pra sua reserva. 🚀📈`];
 
-    function sortearMsg(array, valor) {
-        const msg = array[Math.floor(Math.random() * array.length)];
-        return msg.replace('{valor}', valor);
-    }
+    function sortear(array, valor) { return array[Math.floor(Math.random() * array.length)].replace('{valor}', valor); }
 
-    const matchNumero = frase.match(/\d+(?:[.,]\d+)?/);
-    const valor = matchNumero ? parseFloat(matchNumero[0].replace(',', '.')) : null;
+    const matchNum = frase.match(/\d+(?:[.,]\d+)?/);
+    const valor = matchNum ? parseFloat(matchNum[0].replace(',', '.')) : null;
+
+    // A TESOURA HACKER (Limpa a descrição para o banco de dados)
+    let textoBase = texto.toLowerCase().replace(/r\$/g, ' ')
+        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|reais|exagerei|acho otimo|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|lembrete|me|de|fazer|guardei|guardar|poupei|economizei|come[çc]arei|proxima|semana|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta)\b/g, ' ');
+
+    let descFinanca = textoBase.replace(/\d+(?:[.,]\d+)?/g, '').replace(/\s+/g, ' ').trim();
+    let descTarefa = textoBase.replace(/\s+/g, ' ').trim(); 
+    descFinanca = descFinanca ? descFinanca.charAt(0).toUpperCase() + descFinanca.slice(1) : "Registro financeiro";
+    descTarefa = descTarefa ? descTarefa.charAt(0).toUpperCase() + descTarefa.slice(1) : "Lembrete";
 
     let resposta = {
-        categoria: "conversa", tipo: null, periodo: null, valor: null, termo_busca: null,
-        mensagem: `Aí me complicou, ${nomeUsuario}. Fala "gastei X", "recebi Y", "Fulano me deve Z", ou pede pra ver quem te deve!`
+        categoria: "conversa", tipo: null, periodo: null, valor: null, termo_busca: null, descricao_limpa: null,
+        mensagem: `Opa, parceiro! Sobre esse assunto não consigo te ajudar. Minha missão é organizar suas finanças, reservas e tarefas! Manda um gasto, ganho ou lembrete. 🚀`
     };
 
-    // ==========================================
-    // 2. O CÉREBRO LÓGICO
-    // ==========================================
-
-    // A) PAGAMENTO DE DÍVIDA
-    let matchPagou = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+pagou/);
-    if (matchPagou) {
-        let nomeDevedor = matchPagou[1].replace(/\b(o|a|que)\b/g, '').trim(); 
-        resposta.categoria = "exclusao";
-        resposta.tipo = "financas";
-        resposta.termo_busca = nomeDevedor;
-        resposta.mensagem = `Justo! O ${nomeDevedor} honrou o compromisso. Já risquei a dívida dele do caderninho! 🤝`;
-        return res.status(200).json(resposta);
+    // LÓGICA DE DECISÃO
+    if (frase.match(/quanto\s+([a-zãõáéíóúç\s]+)\s+me\s+deve/)) {
+        let nome = frase.match(/quanto\s+([a-zãõáéíóúç\s]+)\s+me\s+deve/)[1].trim();
+        resposta = { categoria: "consulta", tipo: "dividas", termo_busca: nome, mensagem: `Consultando a ficha do ${nome} aqui nas dívidas... 🔎` };
+    } 
+    else if (frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+pagou/)) {
+        let nome = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+pagou/)[1].replace(/\b(o|a|que)\b/g, '').trim();
+        resposta = { categoria: "exclusao", tipo: "financas", termo_busca: nome, mensagem: `Justo! O ${nome} honrou o compromisso. Já risquei da lista! 🤝` };
     }
-
-    // B) NOVA DÍVIDA
-    let matchDeve = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+deve/);
-    if (matchDeve && valor) {
-        let nomeDevedor = matchDeve[1].replace(/\b(o|a)\b/g, '').trim();
-        let dataVencimento = "";
-        let matchData = frase.match(/(?:para|ate|no|na)\s+([a-z0-9\s]+)$/);
-        if (matchData) dataVencimento = ` (Prazo: ${matchData[1].trim()})`;
-
-        resposta.categoria = "financa";
-        resposta.tipo = "divida";
-        resposta.valor = valor;
-        resposta.mensagem = `Tá no caderninho! ✍️ ${nomeDevedor} te deve R$ ${valor}${dataVencimento}. Ficarei de olho nessa cobrança, chefe.`;
-        return res.status(200).json(resposta);
+    else if (frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+deve/) && valor) {
+        let nome = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+deve/)[1].replace(/\b(o|a)\b/g, '').trim();
+        resposta = { categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: `Dívida de ${nome}`, mensagem: `Tá no caderninho! ✍️ ${nome} te deve R$ ${valor}.` };
     }
-
-    // C) CONSULTAS
-    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo")) {
+    else if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo")) {
         resposta.categoria = "consulta";
-        if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida")) {
-            resposta.tipo = "dividas";
-            resposta.mensagem = "Puxando a lista de quem tá te devendo (o famoso caderninho do fiado): 📜👇";
-        } else if (frase.includes("tarefa") || frase.includes("fazer")) {
-            resposta.tipo = "tarefas";
-            resposta.mensagem = "Aqui estão suas missões pendentes, pra não deixar nada passar: 🎯👇";
-        } else if (frase.includes("ganhei") || frase.includes("recebi") || frase.includes("entrada")) {
-            resposta.tipo = "entrada";
-            resposta.mensagem = "Dinheiro limpo que entrou pra você. Dá uma olhada: 💸👇";
-        } else {
-            resposta.tipo = "gastos";
-            resposta.mensagem = "Resumo do que saiu do seu bolso. Pega a visão: 📊👇";
-        }
         resposta.periodo = frase.includes("semana") ? "semana" : frase.includes("mes") ? "mes" : "hoje";
-        return res.status(200).json(resposta);
+        if (frase.includes("guardado") || frase.includes("cofre") || frase.includes("reserva") || frase.includes("juntei") || frase.includes("junto")) resposta.tipo = "reserva";
+        else if (frase.includes("deve") || frase.includes("divida")) resposta.tipo = "dividas";
+        else if (frase.includes("tarefa") || frase.includes("fazer") || frase.includes("fui") || frase.includes("irei")) resposta.tipo = "tarefas";
+        else if (frase.includes("ganhei") || frase.includes("recebi")) resposta.tipo = "entrada";
+        else resposta.tipo = "gastos";
+        resposta.mensagem = "Puxando seus registros aqui no sistema: 📊👇";
     }
-
-    // D) EXCLUSÃO DIRETA
-    if (frase.includes("apagar") || frase.includes("cancelar") || frase.includes("excluir")) {
-        resposta.categoria = "exclusao";
-        resposta.tipo = "financas";
-        let partes = frase.split(" ");
-        resposta.termo_busca = partes[partes.length - 1]; 
-        resposta.mensagem = `Feito, meu parceiro! Apaguei tudo que encontrei com o nome "${resposta.termo_busca}". 🗑️`;
-        return res.status(200).json(resposta);
+    else if (frase.includes("guardei") || frase.includes("guardar") || frase.includes("cofre") || frase.includes("juntei") || frase.includes("juntar")) {
+        resposta = valor ? { categoria: "financa", tipo: "reserva", valor: valor, descricao_limpa: descFinanca, mensagem: sortear(msgPoupanca, valor) } 
+                           : { categoria: "tarefa", tipo: "pendente", valor: null, descricao_limpa: descTarefa, mensagem: `Plano anotado! Quando guardar a grana, me fala o valor pra eu trancar no cofre! 🔒` };
     }
-
-    // E) ENTRADAS
-    if (frase.includes("recebi") || frase.includes("ganhei") || frase.includes("entrou") || frase.includes("vendi") || frase.includes("lucro")) {
-        resposta.categoria = "financa";
-        resposta.tipo = "entrada";
-        resposta.valor = valor;
-        resposta.mensagem = valor ? sortearMsg(msgGanhos, valor) : "Pô, faltou me dizer de quanto foi esse lucro! Manda de novo com o número.";
-        return res.status(200).json(resposta);
+    else if (frase.includes("recebi") || frase.includes("ganhei") || frase.includes("entrou") || frase.includes("vendi") || frase.includes("adicionei") || frase.includes("depost") || frase.includes("deposito")) {
+        resposta = { categoria: "financa", tipo: "entrada", valor: valor, descricao_limpa: descFinanca, mensagem: valor ? sortear(msgGanhos, valor) : "Faltou o valor!" };
     }
-
-    // F) SAÍDAS
-    if (frase.includes("gastei") || frase.includes("comprei") || frase.includes("paguei") || frase.includes("custou") || frase.includes("saiu")) {
-        resposta.categoria = "financa";
-        resposta.tipo = "saida";
-        resposta.valor = valor;
-        resposta.mensagem = valor ? sortearMsg(msgGastos, valor) : "Qual foi o tamanho do buraco? Manda a frase de novo com o valor do gasto!";
-        return res.status(200).json(resposta);
+    else if (frase.includes("gastei") || frase.includes("comprei") || frase.includes("paguei") || frase.includes("custou") || frase.includes("saiu")) {
+        resposta = { categoria: "financa", tipo: "saida", valor: valor, descricao_limpa: descFinanca, mensagem: valor ? sortear(msgGastos, valor) : "Qual foi o valor do gasto?" };
     }
-
-    // G) LEMBRETES E CONTAS A PAGAR (Nova Habilidade!)
-    if ((frase.includes("pagar") && !valor) || frase.includes("dia de") || frase.includes("tenho que")) {
-        resposta.categoria = "tarefa";
-        resposta.tipo = "pendente";
-        resposta.mensagem = `Anotado na agenda, chefe! Não vou deixar você dar calote. Lembrete salvo nas tarefas pra não esquecer! 🗓️💸`;
-        return res.status(200).json(resposta);
+    else if (frase.includes("apagar") || frase.includes("excluir")) {
+        let termo = frase.split(" ").pop();
+        resposta = { categoria: "exclusao", tipo: "financas", termo_busca: termo, mensagem: `Apaguei os registros de "${termo}". 🗑️` };
     }
-
-    // H) TAREFAS NORMAIS
-    if (frase.includes("vou") || frase.includes("preciso") || frase.includes("lembrar") || frase.includes("tarefa")) {
-        resposta.categoria = "tarefa";
-        resposta.tipo = "pendente";
-        resposta.mensagem = sortearMsg(msgTarefas, "");
-        return res.status(200).json(resposta);
+    else if (frase.includes("dia") || frase.includes("vou") || frase.includes("preciso") || frase.includes("lembrar") || frase.includes("tarefa") || frase.includes("irei") || frase.includes("fui") || frase.includes("ontem")) {
+        resposta = { categoria: "tarefa", tipo: "pendente", valor: null, descricao_limpa: descTarefa, mensagem: sortear(msgTarefas, "") };
     }
-
-    await new Promise(resolve => setTimeout(resolve, 600));
 
     return res.status(200).json(resposta);
 };
