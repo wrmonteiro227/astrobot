@@ -1,91 +1,153 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro | Oficial</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro | Chat Inteligente</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
-        body { background-color: #0B0F19; color: #FFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; }
-        .header-avatar { width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
+        .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
+        .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
         .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
+        .header-info { display: flex; flex-direction: column; }
+        .bot-name { font-weight: 600; font-size: 18px; letter-spacing: 0.5px; }
+        .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
+        .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
+        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
         .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; }
-        .user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border-bottom-right-radius: 4px; }
-        .chat-input-area { padding: 15px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: center; }
-        .input-wrapper { flex-grow: 1; display: flex; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); height: 45px; }
-        input { width: 100%; background: transparent; border: none; color: #FFF; outline: none; }
-        .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; color: #FFF; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+        .message.bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; color: #E5E7EB; }
+        .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
+        .message.temp { opacity: 0.6; font-style: italic; }
+        .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
+        .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); transition: border-color 0.3s; height: 50px; }
+        .input-wrapper:focus-within { border-color: #8B5CF6; }
+        .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
+        .chat-input::placeholder { color: #6B7280; }
+        .action-btn { background: transparent; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.3s, transform 0.2s; }
+        .action-btn:hover { color: #A78BFA; transform: scale(1.1); }
+        .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; width: 40px; height: 40px; border-radius: 50%; margin-left: 5px; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
+        .btn-send:hover { color: white; background: linear-gradient(135deg, #2563EB, #7C3AED); }
+        #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 5px; height: 100%; }
+        .bar { width: 4px; background-color: #EF4444; border-radius: 2px; animation: sound 0ms -800ms linear infinite alternate; }
+        @keyframes sound { 0% { opacity: 0.35; height: 4px; } 100% { opacity: 1; height: 22px; } }
     </style>
 </head>
 <body>
     <div class="app-container">
         <header class="chat-header">
-            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png"></div>
-            <div><p style="font-weight:600">Astro Inteligente</p><p style="font-size:12px;color:#10B981">● Online</p></div>
+            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
+            <div class="header-info">
+                <span class="bot-name">Astro Inteligente</span>
+                <span class="bot-status">Online</span>
+            </div>
         </header>
         <main class="chat-messages" id="chat-messages"></main>
         <footer class="chat-input-area">
             <div class="input-wrapper">
-                <input type="text" id="message-input" placeholder="O que vamos organizar?" onkeypress="if(event.key==='Enter')enviar()">
-                <button style="background:none;border:none;cursor:pointer" id="btn-mic">🎙️</button>
+                <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
+                <div id="voice-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+                <button class="action-btn btn-mic">🎙️</button>
             </div>
-            <button class="btn-send" onclick="enviar()">➤</button>
+            <button class="action-btn btn-send" onclick="enviarMensagem()">➤</button>
         </footer>
     </div>
+
     <script>
-        const user = JSON.parse(localStorage.getItem('astro_usuario_logado'));
-        const supabase = window.supabase.createClient('https://zqvfnykxwlcozvawqgrn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ');
+        const dadosBrutos = localStorage.getItem('astro_usuario_logado');
+        let usuarioLogado = null;
+        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
+        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
         
-        function addMsg(txt, t) {
-            const m = document.createElement('div'); m.className = `message ${t}`; m.textContent = txt;
-            document.getElementById('chat-messages').appendChild(m);
-            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+        const nomeUsuario = usuarioLogado.nome;
+        const idUsuario = usuarioLogado.id;
+        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+        let meuSupabase = window.supabase ? window.supabase.createClient(urlAstro, chaveAstro) : null;
+
+        function adicionarMensagem(texto, remetente, id = null) {
+            const container = document.getElementById('chat-messages');
+            const msg = document.createElement('div');
+            msg.className = `message ${remetente}`;
+            if (id) msg.id = id;
+            msg.textContent = texto;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+            return msg;
         }
 
-        async function enviar() {
-            const i = document.getElementById('message-input'); const txt = i.value.trim();
-            if(!txt) return; addMsg(txt, 'user'); i.value = '';
-            
+        document.addEventListener('DOMContentLoaded', () => {
+            adicionarMensagem(`E aí, ${nomeUsuario}! O que vamos organizar hoje? 🚀`, 'bot');
+        });
+
+        function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
+
+        async function enviarMensagem() {
+            const input = document.getElementById('message-input');
+            const texto = input.value.trim();
+            if(!texto) return;
+            adicionarMensagem(texto, 'user');
+            input.value = '';
+
+            const idTemp = "msg-" + Date.now();
+            adicionarMensagem("Pensando...", "bot temp", idTemp);
+
             try {
-                const res = await fetch('/api/cerebro', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({texto: txt, nomeUsuario: user.nome}) });
+                const res = await fetch('/api/cerebro', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ texto, nomeUsuario })
+                });
                 const analise = await res.json();
+                document.getElementById(idTemp).remove();
 
                 if (analise.categoria === 'financa') {
-                    await supabase.from('financas').insert([{ cliente_id: user.id, descricao: analise.descricao_limpa, tipo: analise.tipo, valor: analise.valor }]);
-                    addMsg(analise.mensagem, 'bot');
+                    // Usa a descrição limpa que a IA gera
+                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, tipo: analise.tipo, valor: analise.valor }]);
+                    adicionarMensagem(analise.mensagem, 'bot');
                 } else if (analise.categoria === 'consulta') {
-                    let q = supabase.from('financas').select('*').eq('cliente_id', user.id);
-                    if(analise.tipo === 'entrada') q = q.eq('tipo', 'entrada');
-                    else if(analise.tipo === 'reserva') q = q.eq('tipo', 'reserva');
-                    else if(analise.tipo === 'gastos') q = q.eq('tipo', 'saida');
+                    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
+                    let query = meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
+                    
+                    // FILTRO DE CATEGORIAS
+                    if (analise.tipo === 'gastos') query = query.eq('tipo', 'saida');
+                    else if (analise.tipo === 'entrada') query = query.eq('tipo', 'entrada');
+                    else if (analise.tipo === 'reserva') query = query.eq('tipo', 'reserva');
+                    else if (analise.tipo === 'dividas') query = query.eq('tipo', 'divida');
 
-                    const { data } = await q;
+                    const { data } = await query;
                     if(data && data.length > 0) {
-                        let t = 0; 
-                        let lista = data.map(it => { 
-                            t += it.valor; 
-                            const ico = it.tipo === 'entrada' ? '✅' : it.tipo === 'reserva' ? '🔒' : '📉';
-                            return `${ico} R$ ${it.valor.toFixed(2)} - ${it.descricao}`; 
-                        }).join('\n');
-                        addMsg(`Resumo de ${analise.tipo}:\n\n${lista}\nTotal: R$ ${t.toFixed(2)}`, 'bot');
-                    } else { addMsg(`Nenhum registro de ${analise.tipo} encontrado.`, 'bot'); }
-                } else { addMsg(analise.mensagem, 'bot'); }
-            } catch (e) { addMsg("Erro na conexão.", "bot"); }
+                        let total = 0, extrato = '';
+                        data.forEach(it => {
+                            total += it.valor || 0;
+                            const ico = it.tipo === 'entrada' ? '✅' : it.tipo === 'reserva' ? '🔒' : it.tipo === 'divida' ? '💸' : '📉';
+                            extrato += `${ico} R$ ${it.valor.toFixed(2)} - ${it.descricao}\n`;
+                        });
+                        adicionarMensagem(`${analise.mensagem}\n\n${extrato}\nTotal: R$ ${total.toFixed(2)}`, 'bot');
+                    } else {
+                        adicionarMensagem(`Não encontrei nada de ${analise.tipo} por aqui, ${nomeUsuario}.`, 'bot');
+                    }
+                } else {
+                    adicionarMensagem(analise.mensagem, 'bot');
+                }
+            } catch (e) { document.getElementById(idTemp).textContent = "Erro na conexão."; }
         }
 
+        // MICROFONE ORIGINAL
+        const btnMic = document.querySelector('.btn-mic');
+        const visualizador = document.getElementById('voice-visualizer');
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
-            const rec = new SpeechRecognition(); rec.lang = 'pt-BR';
-            document.getElementById('btn-mic').onclick = () => rec.start();
-            rec.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; enviar(); };
+            const recognition = new SpeechRecognition(); recognition.lang = 'pt-BR';
+            btnMic.onclick = () => { recognition.start(); visualizador.style.display = 'flex'; input.style.display = 'none'; };
+            recognition.onresult = (e) => { input.value = e.results[0][0].transcript; enviarMensagem(); };
+            recognition.onend = () => { visualizador.style.display = 'none'; input.style.display = 'block'; };
         }
-        addMsg(`Olá, ${user.nome}! O que vamos organizar hoje?`, 'bot');
     </script>
 </body>
 </html>
