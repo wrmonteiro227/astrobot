@@ -83,7 +83,7 @@
         let historicoConversa = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos e agora cobro até quem te deve dinheiro. O que manda hoje? 🚀`;
+            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. 🚀 Agora controlo seus gastos, cobro seus devedores e te ajudo a juntar grana no seu Cofre pessoal. O que manda hoje?`;
             adicionarMensagem(msgBoasVindas, 'bot');
         });
 
@@ -102,7 +102,6 @@
                 historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
                 if (historicoConversa.length > 6) historicoConversa.shift();
             }
-
             return msg;
         }
          
@@ -129,17 +128,17 @@
                 let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // LIMPEZA LOCAL DE EMERGÊNCIA
+                    // LIMPEZA LOCAL
                     if (aguardandoLimpeza) {
-                        if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
+                        if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto') || textoTratado.includes('reserva')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de finanças apagado com sucesso!`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de finanças e cofre apagado!`, 'bot'), 400);
                             return;
                         } else if (textoTratado.includes('tarefa')) {
                             await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado com sucesso!`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado!`, 'bot'), 400);
                             return;
                         } else if (textoTratado.includes('cancelar') || textoTratado.includes('não')) {
                             aguardandoLimpeza = false;
@@ -150,94 +149,63 @@
 
                     if (textoTratado === 'limpar tudo' || textoTratado === 'apagar tudo' || textoTratado === 'limpar' || textoTratado === 'apagar') {
                         aguardandoLimpeza = true;
-                        setTimeout(() => adicionarMensagem(`⚠️ Você ativou a limpeza total!\nO que deseja apagar?\n- "Finanças"\n- "Tarefas"\n- "Cancelar"`, 'bot'), 400);
-                        return;
-                    }
-                    if (textoTratado === 'limpar finanças' || textoTratado === 'limpar financas') {
-                        await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
-                        setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de finanças foi apagado com sucesso!`, 'bot'), 400);
-                        return;
-                    }
-                    if (textoTratado === 'limpar tarefas') {
-                        await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
-                        setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de tarefas foi apagado com sucesso!`, 'bot'), 400);
+                        setTimeout(() => adicionarMensagem(`⚠️ Ativou a limpeza total!\nO que apagar?\n- "Finanças"\n- "Tarefas"\n- "Cancelar"`, 'bot'), 400);
                         return;
                     }
 
                     const idCarregando = "msg-" + Date.now();
-                    adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
+                    adicionarMensagem("Astro pensando...", "bot temp", idCarregando);
 
                     const resAPI = await fetch('/api/cerebro', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            texto: texto, 
-                            nomeUsuario: nomeUsuario,
-                            historico: historicoConversa 
-                        })
+                        body: JSON.stringify({ texto: texto, nomeUsuario: nomeUsuario, historico: historicoConversa })
                     });
 
                     document.getElementById(idCarregando).remove();
 
                     if (!resAPI.ok) {
-                        let msgErro = "Tente novamente daqui a pouco.";
-                        try {
-                            const erroDetalhado = await resAPI.json();
-                            msgErro = erroDetalhado.error || msgErro;
-                        } catch(e) {}
-                        adicionarMensagem(`⚠️ Falha na conexão: ${msgErro}`, 'bot');
+                        adicionarMensagem(`⚠️ Erro de conexão com o cérebro.`, 'bot');
                         return;
                     }
 
                     const analise = await resAPI.json();
 
-                    // EXECUÇÃO NO SUPABASE
+                    // --- SALVAMENTO E CONSULTA ---
                     if (analise.categoria === 'financa') {
-                        if (analise.valor === null || analise.valor === undefined) {
-                            adicionarMensagem("Putz, entendi que é sobre dinheiro, mas faltou me dizer o valor certinho. Pode mandar de novo com o número?", 'bot');
+                        if (analise.valor === null) {
+                            adicionarMensagem("Faltou o valor. Pode mandar o número?", 'bot');
                             return;
                         }
-                        const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
-                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
+                        const descFinal = analise.descricao_limpa || texto;
+                        const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: descFinal, tipo: analise.tipo, valor: analise.valor }]);
+                        if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
                         else adicionarMensagem(analise.mensagem, 'bot');
 
                     } else if (analise.categoria === 'tarefa') {
-                        const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: analise.tipo || 'pendente' }]);
-                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
+                        const descFinal = analise.descricao_limpa || texto;
+                        const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: descFinal, status: analise.tipo || 'pendente' }]);
+                        if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
                         else adicionarMensagem(analise.mensagem, 'bot');
 
                     } else if (analise.categoria === 'exclusao') {
-                        if (!analise.termo_busca) {
-                            adicionarMensagem(analise.mensagem, 'bot'); 
-                            return;
-                        }
                         const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos') ? 'financas' : 'tarefas';
-                        
                         const { error } = await meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
-                            
-                        if (error) adicionarMensagem(`⚠️ Erro ao apagar no banco: ${error.message}`, 'bot');
+                        if (error) adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot');
                         else adicionarMensagem(analise.mensagem, 'bot');
 
                     } else if (analise.categoria === 'consulta') {
+                        let tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
+                        let query = meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
+
+                        if (analise.tipo === 'gastos') query = query.eq('tipo', 'saida');
+                        else if (analise.tipo === 'dividas') query = query.eq('tipo', 'divida');
+                        else if (analise.tipo === 'entrada') query = query.eq('tipo', 'entrada');
+                        else if (analise.tipo === 'reserva') query = query.eq('tipo', 'reserva'); // <--- COFRE
                         
-                        // NOVO SISTEMA DE FILTRO PARA ACHAR DÍVIDAS E GANHOS
-                        let tabela = 'tarefas';
-                        let filtroStatus = 'pendente';
+                        if (analise.termo_busca) query = query.ilike('descricao', `%${analise.termo_busca}%`);
 
-                        if (analise.tipo === 'gastos') {
-                            tabela = 'financas';
-                            filtroStatus = 'saida';
-                        } else if (analise.tipo === 'dividas') {
-                            tabela = 'financas';
-                            filtroStatus = 'divida';
-                        } else if (analise.tipo === 'entrada' || analise.tipo === 'ganhos') {
-                            tabela = 'financas';
-                            filtroStatus = 'entrada';
-                        }
-
-                        const colunaBusca = tabela === 'financas' ? 'tipo' : 'status';
-                        const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(colunaBusca, filtroStatus);
-
+                        const { data, error } = await query;
                         if (error) { adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'); return; }
 
                         const timestampFiltro = obterDataFiltro(analise.periodo || 'hoje');
@@ -246,14 +214,17 @@
                         if (itensValidos.length > 0) {
                             if (tabela === 'financas') {
                                 let total = 0; let extrato = '';
-                                itensValidos.forEach(item => { total += item.valor; extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`; });
+                                itensValidos.forEach(item => { 
+                                    total += item.valor; 
+                                    extrato += `• R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`; 
+                                });
                                 adicionarMensagem(`${analise.mensagem}\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)}`, 'bot');
                             } else {
                                 let lista = itensValidos.map(t => `• ${t.descricao}`).join('\n');
                                 adicionarMensagem(`${analise.mensagem}\n\n${lista}`, 'bot');
                             }
                         } else {
-                            adicionarMensagem(`Não encontrei nada registrado nesse período, ${nomeUsuario}! Pode ficar tranquilo. 😎`, 'bot');
+                            adicionarMensagem(`Não encontrei nada sobre isso no sistema, ${nomeUsuario}. 😎`, 'bot');
                         }
                     } else {
                         adicionarMensagem(analise.mensagem, 'bot');
@@ -261,12 +232,12 @@
 
                 } catch (err) { 
                     console.error(err); 
-                    adicionarMensagem("⚠️ Ocorreu um erro no processamento.", "bot"); 
+                    adicionarMensagem("⚠️ Erro no processamento.", "bot"); 
                 }
             }
         }
 
-        // MICROFONE
+        // MICROFONE (SEM ALTERAÇÕES)
         const btnMic = document.querySelector('.btn-mic');
         const inputMensagem = document.getElementById('message-input');
         const visualizador = document.getElementById('voice-visualizer');
