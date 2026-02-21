@@ -1,148 +1,65 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro | Chat Inteligente</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro | Oficial</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
-        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
-        .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
-        .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .header-info { display: flex; flex-direction: column; }
-        .bot-name { font-weight: 600; font-size: 18px; letter-spacing: 0.5px; }
-        .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
-        .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
-        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .message.bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; color: #E5E7EB; }
-        .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
-        .message.temp { opacity: 0.6; font-style: italic; }
-        .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
-        .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); transition: border-color 0.3s; height: 50px; }
-        .input-wrapper:focus-within { border-color: #8B5CF6; }
-        .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
-        .chat-input::placeholder { color: #6B7280; }
-        .action-btn { background: transparent; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.3s, transform 0.2s; }
-        .action-btn:hover { color: #A78BFA; transform: scale(1.1); }
-        .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; width: 40px; height: 40px; border-radius: 50%; margin-left: 5px; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
-        #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 5px; height: 100%; }
-        .bar { width: 4px; background-color: #EF4444; border-radius: 2px; animation: sound 0ms -800ms linear infinite alternate; }
-        @keyframes sound { 0% { opacity: 0.35; height: 4px; } 100% { opacity: 1; height: 22px; } }
+        body { background-color: #0B0F19; color: #FFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .app-container { width: 100%; max-width: 420px; height: 100vh; background: #111827; display: flex; flex-direction: column; }
+        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 85%; padding: 12px; border-radius: 15px; font-size: 15px; }
+        .bot { align-self: flex-start; background: #1F2937; }
+        .user { align-self: flex-end; background: #3B82F6; }
+        .chat-input-area { padding: 15px; background: #111827; border-top: 1px solid #1F2937; display: flex; gap: 10px; }
+        input { flex-grow: 1; background: #1F2937; border: none; color: #FFF; padding: 12px; border-radius: 10px; outline: none; }
+        button { background: #3B82F6; border: none; color: #FFF; padding: 10px 15px; border-radius: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <header class="chat-header">
-            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
-            <div class="header-info">
-                <span class="bot-name">Astro Inteligente</span>
-                <span class="bot-status">Online</span>
-            </div>
-        </header>
         <main class="chat-messages" id="chat-messages"></main>
         <footer class="chat-input-area">
-            <div class="input-wrapper">
-                <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
-                <div id="voice-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-                <button class="action-btn btn-mic">🎙️</button>
-            </div>
-            <button class="action-btn btn-send" onclick="enviarMensagem()">➤</button>
+            <input type="text" id="message-input" placeholder="Digite aqui..." onkeypress="if(event.key==='Enter')enviar()">
+            <button onclick="enviar()">➤</button>
         </footer>
     </div>
-
     <script>
-        const dadosBrutos = localStorage.getItem('astro_usuario_logado');
-        let usuarioLogado = null;
-        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
-        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
+        const user = JSON.parse(localStorage.getItem('astro_usuario_logado'));
+        const supabase = window.supabase.createClient('https://zqvfnykxwlcozvawqgrn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ');
         
-        const nomeUsuario = usuarioLogado.nome;
-        const idUsuario = usuarioLogado.id;
-        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        let meuSupabase = window.supabase ? window.supabase.createClient(urlAstro, chaveAstro) : null;
-
-        let historicoConversa = [];
-
-        document.addEventListener('DOMContentLoaded', () => {
-            adicionarMensagem(`Olá, ${nomeUsuario}! Estou pronto para organizar suas finanças, tarefas e seu cofre. O que faremos agora?`, 'bot');
-        });
-
-        function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
-
-        function adicionarMensagem(texto, remetente, id = null) {
-            const chatMessages = document.getElementById('chat-messages');
-            const msg = document.createElement('div');
-            msg.className = `message ${remetente}`; 
-            if (id) msg.id = id;
-            msg.textContent = texto;
-            chatMessages.appendChild(msg);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            if (!id) {
-                historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
-                if (historicoConversa.length > 6) historicoConversa.shift();
-            }
-            return msg;
+        function addMsg(txt, t) {
+            const m = document.createElement('div'); m.className = `message ${t}`; m.textContent = txt;
+            document.getElementById('chat-messages').appendChild(m);
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
         }
 
-        async function enviarMensagem() {
-            const input = document.getElementById('message-input');
-            const texto = input.value.trim();
-            if (!texto) return;
+        async function enviar() {
+            const i = document.getElementById('message-input'); const txt = i.value.trim();
+            if(!txt) return; addMsg(txt, 'user'); i.value = '';
+            
+            const res = await fetch('/api/cerebro', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({texto: txt, nomeUsuario: user.nome}) });
+            const data = await res.json();
 
-            adicionarMensagem(texto, 'user');
-            input.value = '';
+            if (data.categoria === 'financa') {
+                await supabase.from('financas').insert([{ cliente_id: user.id, descricao: data.descricao_limpa, tipo: data.tipo, valor: data.valor }]);
+                addMsg(data.mensagem, 'bot');
+            } else if (data.categoria === 'consulta') {
+                let q = supabase.from('financas').select('*').eq('cliente_id', user.id);
+                if(data.tipo === 'entrada') q = q.eq('tipo', 'entrada');
+                else if(data.tipo === 'reserva') q = q.eq('tipo', 'reserva');
+                else if(data.tipo === 'gastos') q = q.eq('tipo', 'saida');
 
-            const idTemp = "msg-" + Date.now();
-            adicionarMensagem("Processando...", "bot temp", idTemp);
-
-            try {
-                const res = await fetch('/api/cerebro', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ texto, nomeUsuario, historico: historicoConversa })
-                });
-                const analise = await res.json();
-                document.getElementById(idTemp).remove();
-
-                if (analise.categoria === 'financa') {
-                    const descFinal = analise.descricao_limpa || texto;
-                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: descFinal, tipo: analise.tipo, valor: analise.valor }]);
-                    adicionarMensagem(analise.mensagem, 'bot');
-
-                } else if (analise.categoria === 'consulta') {
-                    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
-                    // FILTRO ULTRA-SELETIVO: Aqui garantimos que ele pegue SÓ o tipo certo
-                    let query = meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
-                    
-                    if (analise.tipo === 'gastos') query = query.eq('tipo', 'saida');
-                    else if (analise.tipo === 'entrada') query = query.eq('tipo', 'entrada');
-                    else if (analise.tipo === 'reserva') query = query.eq('tipo', 'reserva');
-                    else if (analise.tipo === 'dividas') query = query.eq('tipo', 'divida');
-
-                    const { data } = await query;
-                    if (data && data.length > 0) {
-                        let total = 0, lista = '';
-                        data.forEach(item => {
-                            total += item.valor || 0;
-                            let icone = item.tipo === 'entrada' ? '✅' : item.tipo === 'reserva' ? '🔒' : '📉';
-                            lista += `${icone} R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`;
-                        });
-                        adicionarMensagem(`Aqui está seu resumo de ${analise.tipo}:\n\n${lista}\n💰 Total: R$ ${total.toFixed(2)}`, 'bot');
-                    } else {
-                        adicionarMensagem(`Não encontrei nada registrado como ${analise.tipo}.`, 'bot');
-                    }
-                } else {
-                    adicionarMensagem(analise.mensagem, 'bot');
-                }
-            } catch (e) { document.getElementById(idTemp).textContent = "Erro na conexão."; }
+                const { data: itens } = await q;
+                if(itens && itens.length > 0) {
+                    let t = 0; let lista = itens.map(it => { t += it.valor; return `• R$ ${it.valor.toFixed(2)} - ${it.descricao}`; }).join('\n');
+                    addMsg(`${data.mensagem}\n\n${lista}\nTotal: R$ ${t.toFixed(2)}`, 'bot');
+                } else { addMsg("Nada encontrado.", 'bot'); }
+            } else { addMsg(data.mensagem, 'bot'); }
         }
+        addMsg(`Olá, ${user.nome}! Como posso ajudar?`, 'bot');
     </script>
 </body>
 </html>
