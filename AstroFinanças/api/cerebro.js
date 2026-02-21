@@ -1,74 +1,136 @@
 module.exports = async function(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ erro: 'Só aceita POST' });
 
-    const { texto, nomeUsuario, historico = [] } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) return res.status(500).json({ error: 'Chave da API não encontrada na Vercel.' });
-
-    const historicoFormatado = historico.map(msg => `${msg.role === 'user' ? 'Usuário' : 'Astro'}: ${msg.content}`).join('\n');
-
-    const prompt = `
-    Você é o Astro, um assistente financeiro e organizador pessoal super inteligente e carismático do usuário ${nomeUsuario}.
-
-    Histórico recente da conversa:
-    ${historicoFormatado}
-
-    Mensagem ATUAL do usuário: "${texto}"
+    const { texto, nomeUsuario } = req.body;
     
-    Classifique a intenção do usuário em UMA das 5 categorias:
-    1. "consulta": O usuário quer ver o extrato. Pode ser gastos, ganhos, tarefas ou QUEM DEVE DINHEIRO. (Ex: "quem me deve?", "quanto gastei?", "o que recebi?").
-    2. "tarefa": Anotar uma NOVA tarefa (Ex: "ir no mercado").
-    3. "financa": Registrar dinheiro. 
-       - Se for GASTO: tipo "saida". (Ex: "gastei 50", "comprei uma blusa de 100").
-       - Se for PAGAMENTO RECEBIDO: tipo "entrada". (Ex: "João me pagou 100", "recebi 50 do pix").
-       - Se for DÍVIDA DE TERCEIROS: tipo "divida". (Ex: "João me deve 150", "falta o Marcos pagar 30").
-       OBRIGATÓRIO TER NÚMERO.
-    4. "exclusao": Apagar algo. Olhe o histórico se o usuário disser "cancela isso" ou "ele já pagou, apaga a divida".
-    5. "conversa": Bate-papo normal ou dúvidas.
-    
-    Regras de preenchimento do JSON:
-    - 'tipo': 
-        Se consulta: "gastos", "tarefas", "dividas" ou "ganhos".
-        Se financa: "saida", "entrada" ou "divida".
-        Se tarefa: "pendente".
-        Se exclusao: "financas" ou "tarefas".
-    - 'periodo': "hoje", "semana" ou "mes" (apenas para consulta).
-    - 'valor': Número extraído do texto (apenas se for financa). Ex: 150.
-    - 'termo_busca': Palavra-chave para deletar (apenas exclusão).
-    - 'mensagem': Sua resposta final. Use emojis, celebre quando entrar dinheiro e seja firme nas cobranças!
-    
-    Retorne APENAS um JSON válido. Não adicione crases (\`\`\`) ou comentários.
-    Formato EXATO:
-    {
-        "categoria": "financa",
-        "tipo": "entrada",
-        "periodo": null,
-        "valor": 100,
-        "termo_busca": null,
-        "mensagem": "Boa! Anotei aqui que o João te pagou R$ 100,00. Dinheiro no bolso! 🤑"
+    // Deixa tudo minúsculo e tira os acentos básicos para o robô não se confundir
+    const frase = texto.toLowerCase().trim();
+
+    // ==========================================
+    // 1. O MOTOR DE CARISMA (Respostas Sorteadas)
+    // ==========================================
+    const msgGastos = [
+        `Anotado, chefe! R$ {valor} indo embora. Tem que controlar, hein? 💸`,
+        `Gasto de R$ {valor} registrado. Doendo no bolso, mas tá salvo! 📉`,
+        `Lá se vai R$ {valor}... Tá no sistema! 📝`
+    ];
+    const msgGanhos = [
+        `Boa, ${nomeUsuario}! R$ {valor} na conta. O pai tá on! 🤑`,
+        `Foguete não tem ré! R$ {valor} registrado nas entradas. 🚀`,
+        `Dinheiro no bolso! Mais R$ {valor} pra conta do chefe. 💰`
+    ];
+    const msgTarefas = [
+        `Missão dada é missão cumprida. Anotei na sua lista! 🫡`,
+        `Deixa comigo, ${nomeUsuario}. Tá salvo nas tarefas! ✅`,
+        `Memória de elefante aqui. Tarefa registrada com sucesso! 🐘`
+    ];
+
+    // Função que escolhe uma frase aleatória e injeta o valor do dinheiro
+    function sortearMsg(array, valor) {
+        const msg = array[Math.floor(Math.random() * array.length)];
+        return msg.replace('{valor}', valor);
     }
-    `;
 
-    try {
-        const resposta = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: "application/json" } 
-            })
-        });
+    // Tenta caçar qualquer número na frase do usuário
+    const matchNumero = frase.match(/\d+(?:[.,]\d+)?/);
+    const valor = matchNumero ? parseFloat(matchNumero[0].replace(',', '.')) : null;
 
-        const data = await resposta.json();
-        if (data.error) throw new Error(`Google bloqueou: ${data.error.message}`);
+    let resposta = {
+        categoria: "conversa", tipo: null, periodo: null, valor: null, termo_busca: null,
+        mensagem: `Aí me complicou, ${nomeUsuario}. Fala "gastei X", "recebi Y", "Fulano me deve Z", ou pede pra ver quem te deve!`
+    };
 
-        const textoJson = data.candidates[0].content.parts[0].text;
-        const jsonLimpo = textoJson.replace(/```json/g, '').replace(/```/g, '').trim();
+    // ==========================================
+    // 2. O CÉREBRO LÓGICO (CAÇADOR DE INTENÇÕES)
+    // ==========================================
+
+    // A) QUANDO O DEVEDOR PAGA A DÍVIDA (ex: "o junior me pagou")
+    let matchPagou = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+pagou/);
+    if (matchPagou) {
+        // Tira as palavras "o" ou "a" pra pegar só o nome limpo
+        let nomeDevedor = matchPagou[1].replace(/\b(o|a|que)\b/g, '').trim(); 
+        resposta.categoria = "exclusao";
+        resposta.tipo = "financas";
+        resposta.termo_busca = nomeDevedor; // Manda pro banco apagar quem tiver esse nome
+        resposta.mensagem = `Justo! O ${nomeDevedor} honrou o compromisso. Já risquei a dívida dele do caderninho! 🤝`;
+        return res.status(200).json(resposta);
+    }
+
+    // B) REGISTRANDO NOVA DÍVIDA (ex: "junior me deve 50 para sabado")
+    let matchDeve = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+deve/);
+    if (matchDeve && valor) {
+        let nomeDevedor = matchDeve[1].replace(/\b(o|a)\b/g, '').trim();
+        let dataVencimento = "";
         
-        return res.status(200).json(JSON.parse(jsonLimpo));
-    } catch (error) {
-        console.error("Erro detalhado:", error.message);
-        return res.status(500).json({ error: error.message });
+        // Caça se tem prazo na frase
+        let matchData = frase.match(/(?:para|ate|no|na)\s+([a-z0-9\s]+)$/);
+        if (matchData) dataVencimento = ` (Prazo: ${matchData[1].trim()})`;
+
+        resposta.categoria = "financa";
+        resposta.tipo = "divida";
+        resposta.valor = valor;
+        resposta.mensagem = `Tá no caderninho! ✍️ ${nomeDevedor} te deve R$ ${valor}${dataVencimento}. Ficarei de olho nessa cobrança, chefe.`;
+        return res.status(200).json(resposta);
     }
+
+    // C) CONSULTAS (Ver extratos e quem deve)
+    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo")) {
+        resposta.categoria = "consulta";
+        if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida")) {
+            resposta.tipo = "dividas";
+            resposta.mensagem = "Puxando a lista de quem tá te devendo (o famoso caderninho do fiado): 📜👇";
+        } else if (frase.includes("tarefa") || frase.includes("fazer")) {
+            resposta.tipo = "tarefas";
+            resposta.mensagem = "Aqui estão suas missões pendentes, pra não deixar nada passar: 🎯👇";
+        } else if (frase.includes("ganhei") || frase.includes("recebi") || frase.includes("entrada")) {
+            resposta.tipo = "entrada";
+            resposta.mensagem = "Dinheiro limpo que entrou pra você. Dá uma olhada: 💸👇";
+        } else {
+            resposta.tipo = "gastos";
+            resposta.mensagem = "Resumo do que saiu do seu bolso. Pega a visão: 📊👇";
+        }
+        resposta.periodo = frase.includes("semana") ? "semana" : frase.includes("mes") ? "mes" : "hoje";
+        return res.status(200).json(resposta);
+    }
+
+    // D) EXCLUSÃO DIRETA (ex: "apagar igreja")
+    if (frase.includes("apagar") || frase.includes("cancelar") || frase.includes("excluir")) {
+        resposta.categoria = "exclusao";
+        resposta.tipo = "financas";
+        let partes = frase.split(" ");
+        resposta.termo_busca = partes[partes.length - 1]; // Pega a última palavra
+        resposta.mensagem = `Feito, meu parceiro! Apaguei tudo que encontrei com o nome "${resposta.termo_busca}". 🗑️`;
+        return res.status(200).json(resposta);
+    }
+
+    // E) ENTRADAS / LUCRO
+    if (frase.includes("recebi") || frase.includes("ganhei") || frase.includes("entrou") || frase.includes("vendi") || frase.includes("lucro")) {
+        resposta.categoria = "financa";
+        resposta.tipo = "entrada";
+        resposta.valor = valor;
+        resposta.mensagem = valor ? sortearMsg(msgGanhos, valor) : "Pô, faltou me dizer de quanto foi esse lucro! Manda de novo com o número.";
+        return res.status(200).json(resposta);
+    }
+
+    // F) SAÍDAS / GASTOS
+    if (frase.includes("gastei") || frase.includes("comprei") || frase.includes("paguei") || frase.includes("custou") || frase.includes("saiu")) {
+        resposta.categoria = "financa";
+        resposta.tipo = "saida";
+        resposta.valor = valor;
+        resposta.mensagem = valor ? sortearMsg(msgGastos, valor) : "Qual foi o tamanho do buraco? Manda a frase de novo com o valor do gasto!";
+        return res.status(200).json(resposta);
+    }
+
+    // G) TAREFAS
+    if (frase.includes("vou") || frase.includes("preciso") || frase.includes("lembrar") || frase.includes("tarefa")) {
+        resposta.categoria = "tarefa";
+        resposta.tipo = "pendente";
+        resposta.mensagem = sortearMsg(msgTarefas, "");
+        return res.status(200).json(resposta);
+    }
+
+    // Simula que a IA está "pensando" (dá aquele toque humano pro site não responder tão rápido que pareça irreal)
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    return res.status(200).json(resposta);
 };
