@@ -15,7 +15,7 @@ module.exports = async function(req, res) {
     const valor = matchNumero ? parseFloat(matchNumero[0].replace(',', '.')) : null;
 
     let textoBase = texto.toLowerCase()
-        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|r\$|reais|exagerei|acho otimo|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|lembrete|me|de|fazer|guardei|guardar|poupei|economizei|come[çc]arei|proxima|semana|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta|oque|o que|tenho)\b/g, ' ');
+        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|r\$|reais|exagerei|acho otimo|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|lembrete|me|de|fazer|guardei|guardar|poupei|economizei|come[çc]arei|proxima|semana|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta|oque|o que|tenho|mostre|mostrar|quando|qual dia|que dia|mandar|segunda|ter[çc]a|quarta|quinta|sexta|s[aá]bado|domingo|feira)\b/g, ' ');
 
     let descFinanca = textoBase.replace(/\d+(?:[.,]\d+)?/g, '').replace(/\s+/g, ' ').trim();
     let descTarefa = textoBase.replace(/\s+/g, ' ').trim(); 
@@ -23,7 +23,7 @@ module.exports = async function(req, res) {
     descFinanca = descFinanca ? descFinanca.charAt(0).toUpperCase() + descFinanca.slice(1) : "";
     descTarefa = descTarefa ? descTarefa.charAt(0).toUpperCase() + descTarefa.slice(1) : "";
     
-    if (descFinanca === "") descFinanca = "Registro";
+    if (descFinanca === "") descFinanca = "Registro financeiro";
     if (descTarefa === "") descTarefa = "Lembrete";
 
     let resposta = {
@@ -31,7 +31,6 @@ module.exports = async function(req, res) {
         mensagem: `Opa, parceiro! Sobre esse assunto eu não vou conseguir te ajudar. Minha missão aqui é única: tirar o peso das suas costas e organizar as finanças, reservas e tarefas que sobrecarregam o seu dia a dia. Manda aí um gasto, um ganho, um valor guardado ou um lembrete pra gente focar no que importa! 🚀💼`
     };
 
-    // 1. CORREÇÃO DA LIMPEZA: EXIGE APENAS A PALAVRA
     if (frase.startsWith("apagar ") || frase.startsWith("limpar ") || frase.includes("apagar tudo") || frase.includes("limpar tudo")) {
         if (frase !== "apagar" && frase !== "limpar" && frase !== "apagar tudo" && frase !== "limpar tudo") {
             resposta = { categoria: "conversa", mensagem: `⚠️ Para iniciar a limpeza do sistema de forma segura, me envie somente a palavra "limpar" ou "apagar" para que eu possa lhe enviar as opções do que pode ser apagado.` };
@@ -60,8 +59,7 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // 2. CORREÇÃO DAS TAREFAS: ADICIONADO "OQUE" E "O QUE" PARA PEGAR QUALQUER VARIAÇÃO NO MEIO DA FRASE
-    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo") || frase.includes("oque") || frase.includes("o que") || frase.includes("quais")) {
+    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo") || frase.includes("oque") || frase.includes("o que") || frase.includes("quais") || frase.includes("mostre") || frase.includes("mostrar") || frase.includes("quando") || frase.includes("que dia") || frase.includes("qual dia")) {
         resposta.categoria = "consulta";
         resposta.periodo = frase.includes("semana") ? "semana" : frase.includes("mes") ? "mes" : "hoje";
         
@@ -69,12 +67,12 @@ module.exports = async function(req, res) {
             resposta.tipo = "reserva"; resposta.mensagem = "Abrindo o cofre pra ver como tá a sua construção de riqueza: 🏦👇";
         } else if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida")) {
             resposta.tipo = "dividas"; resposta.mensagem = "Lista de quem tá te devendo: 📜👇";
-        } else if (frase.includes("tarefa") || frase.includes("fazer") || frase.includes("fui") || frase.includes("irei") || frase.includes("lembretes") || frase.includes("tenho")) {
-            resposta.tipo = "tarefas"; resposta.mensagem = "Sua agenda de tarefas e registros: 🎯👇";
+        } else if (frase.includes("tarefa") || frase.includes("fazer") || frase.includes("fui") || frase.includes("irei") || frase.includes("lembretes") || frase.includes("tenho") || frase.includes("quando") || frase.includes("que dia")) {
+            resposta.tipo = "tarefas"; resposta.mensagem = "Buscando na sua agenda de tarefas: 🎯👇";
         } else if (frase.includes("ganhei") || frase.includes("recebi") || frase.includes("entrou")) {
             resposta.tipo = "entrada"; resposta.mensagem = "Dinheiro que entrou: 💸👇";
         } else {
-            resposta.tipo = "gastos"; resposta.mensagem = "Resumo do que saiu do bolso: 📊👇";
+            resposta.tipo = "gastos"; resposta.mensagem = "Resumo financeiro: 📊👇";
         }
         return res.status(200).json(resposta);
     }
@@ -94,7 +92,7 @@ module.exports = async function(req, res) {
     else if (frase.includes("gastei") || frase.includes("comprei") || frase.includes("paguei") || frase.includes("custou") || frase.includes("saiu")) {
         resposta = { categoria: "financa", tipo: "saida", valor: valor, descricao_limpa: descFinanca, mensagem: valor ? sortearMsg(msgGastos, valor) : "Faltou o número do gasto!" };
     }
-    else if ((frase.includes("pagar") && !valor) || frase.includes("dia ") || frase.includes("tenho que") || frase.includes("vou") || frase.includes("preciso") || frase.includes("lembrar") || frase.includes("lembre") || frase.includes("lembrete") || frase.includes("tarefa") || frase.includes("irei") || frase.includes("fui") || frase.includes("ontem") || frase.includes("amanha") || frase.includes("come[çc]arei")) {
+    else if ((frase.includes("pagar") && !valor) || frase.includes("dia ") || frase.includes("tenho que") || frase.includes("vou") || frase.includes("preciso") || frase.includes("lembrar") || frase.includes("lembre") || frase.includes("lembrete") || frase.includes("tarefa") || frase.includes("irei") || frase.includes("fui") || frase.includes("ontem") || frase.includes("amanh") || frase.includes("come[çc]arei") || frase.includes("mandar") || frase.includes("transferir") || frase.includes("segunda") || frase.includes("terça") || frase.includes("terca") || frase.includes("quarta") || frase.includes("quinta") || frase.includes("sexta") || frase.includes("sabado") || frase.includes("sábado") || frase.includes("domingo")) {
         resposta = { categoria: "tarefa", tipo: "pendente", valor: null, descricao_limpa: descTarefa, mensagem: sortearMsg(msgTarefas, "") };
     }
 
