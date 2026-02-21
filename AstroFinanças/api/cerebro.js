@@ -2,33 +2,42 @@ module.exports = async function(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
     const { texto, nomeUsuario } = req.body;
     const frase = texto.toLowerCase().trim();
+    
+    // Captura o valor numérico
     const matchNum = frase.match(/\d+(?:[.,]\d+)?/);
     const valor = matchNum ? parseFloat(matchNum[0].replace(',', '.')) : null;
 
-    let textoBase = texto.toLowerCase().replace(/r\$/g, ' ')
-        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|reais|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|me|de|fazer|guardei|guardar|poupei|economizei|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta)\b/g, ' ');
+    // Tesoura: remove comandos mas preserva o que é importante
+    let descLimpa = texto.toLowerCase()
+        .replace(/r\$/g, '')
+        .replace(/\b(depositei|guardei|gastei|paguei|recebi|ganhei|juntei|no cofre|hoje|ontem|reais)\b/g, '')
+        .replace(/\d+(?:[.,]\d+)?/g, '')
+        .replace(/\s+/g, ' ').trim();
+    
+    descLimpa = descLimpa ? descLimpa.charAt(0).toUpperCase() + descLimpa.slice(1) : "Registro Financeiro";
 
-    let descLimpa = textoBase.replace(/\d+(?:[.,]\d+)?/g, '').replace(/\s+/g, ' ').trim();
-    descLimpa = descLimpa ? descLimpa.charAt(0).toUpperCase() + descLimpa.slice(1) : "Registro";
+    let resposta = {
+        categoria: "conversa", tipo: null, valor: valor, descricao_limpa: descLimpa,
+        mensagem: `Olá ${nomeUsuario}, não consegui processar esse comando. Tente algo como 'gastei 50 com lanche' ou 'guardei 100 no cofre'.`
+    };
 
-    let resposta = { categoria: "conversa", tipo: null, valor: valor, descricao_limpa: descLimpa, mensagem: `Olá, ${nomeUsuario}. Não entendi esse comando. Pode falar sobre gastos, depósitos ou cofre?` };
-
-    if (frase.includes("quanto") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo")) {
+    // Lógica de Consulta
+    if (frase.includes("quanto") || frase.includes("extrato") || frase.includes("resumo")) {
         resposta.categoria = "consulta";
-        if (frase.includes("guardado") || frase.includes("cofre") || frase.includes("reserva") || frase.includes("juntei") || frase.includes("junto")) resposta.tipo = "reserva";
-        else if (frase.includes("depositei") || frase.includes("ganhei") || frase.includes("recebi") || frase.includes("entrada")) resposta.tipo = "entrada";
-        else if (frase.includes("deve") || frase.includes("divida")) resposta.tipo = "dividas";
+        if (frase.includes("cofre") || frase.includes("juntei") || frase.includes("reserva")) resposta.tipo = "reserva";
+        else if (frase.includes("depositei") || frase.includes("ganhei") || frase.includes("entrada")) resposta.tipo = "entrada";
         else resposta.tipo = "gastos";
-        resposta.mensagem = "Localizando seus registros no sistema...";
-    } 
-    else if (frase.includes("guardei") || frase.includes("guardar") || frase.includes("cofre") || frase.includes("juntei") || frase.includes("juntar")) {
-        resposta = { categoria: "financa", tipo: "reserva", valor: valor, mensagem: `R$ ${valor} foram guardados no seu cofre com sucesso. 🔒` };
+        resposta.mensagem = "Buscando seus dados no sistema...";
     }
-    else if (frase.includes("recebi") || frase.includes("ganhei") || frase.includes("entrou") || frase.includes("adicionei") || frase.includes("deposit") || frase.includes("depost")) {
-        resposta = { categoria: "financa", tipo: "entrada", valor: valor, mensagem: `Depósito de R$ ${valor} registrado na sua conta. ✅` };
+    // Lógica de Registro
+    else if (frase.includes("guard") || frase.includes("junt") || frase.includes("cofre")) {
+        resposta = { categoria: "financa", tipo: "reserva", valor: valor, descricao_limpa: descLimpa, mensagem: `R$ ${valor} foram adicionados ao seu cofre. 🔒` };
     }
-    else if (frase.includes("gastei") || frase.includes("comprei") || frase.includes("paguei")) {
-        resposta = { categoria: "financa", tipo: "saida", valor: valor, mensagem: `Gasto de R$ ${valor} computado. 📉` };
+    else if (frase.includes("deposit") || frase.includes("receb") || frase.includes("ganh")) {
+        resposta = { categoria: "financa", tipo: "entrada", valor: valor, descricao_limpa: descLimpa, mensagem: `R$ ${valor} creditados com sucesso. ✅` };
+    }
+    else if (frase.includes("gast") || frase.includes("pagu") || frase.includes("compr")) {
+        resposta = { categoria: "financa", tipo: "saida", valor: valor, descricao_limpa: descLimpa, mensagem: `Gasto de R$ ${valor} registrado. 📉` };
     }
 
     return res.status(200).json(resposta);
