@@ -33,7 +33,6 @@ module.exports = async function(req, res) {
 
     // 1. CORREÇÃO DA LIMPEZA: EXIGE APENAS A PALAVRA
     if (frase.startsWith("apagar ") || frase.startsWith("limpar ") || frase.includes("apagar tudo") || frase.includes("limpar tudo")) {
-        // Se a pessoa digitou "apagar [alguma coisa]", ele avisa
         if (frase !== "apagar" && frase !== "limpar" && frase !== "apagar tudo" && frase !== "limpar tudo") {
             resposta = { categoria: "conversa", mensagem: `⚠️ Para iniciar a limpeza do sistema de forma segura, me envie somente a palavra "limpar" ou "apagar" para que eu possa lhe enviar as opções do que pode ser apagado.` };
             return res.status(200).json(resposta);
@@ -61,8 +60,8 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // 2. CORREÇÃO DAS TAREFAS: ADICIONADO "O QUE TENHO" E "OQUE TENHO"
-    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo") || frase.includes("oque tenho") || frase.includes("o que tenho")) {
+    // 2. CORREÇÃO DAS TAREFAS: ADICIONADO "OQUE" E "O QUE" PARA PEGAR QUALQUER VARIAÇÃO NO MEIO DA FRASE
+    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo") || frase.includes("oque") || frase.includes("o que") || frase.includes("quais")) {
         resposta.categoria = "consulta";
         resposta.periodo = frase.includes("semana") ? "semana" : frase.includes("mes") ? "mes" : "hoje";
         
@@ -70,7 +69,7 @@ module.exports = async function(req, res) {
             resposta.tipo = "reserva"; resposta.mensagem = "Abrindo o cofre pra ver como tá a sua construção de riqueza: 🏦👇";
         } else if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida")) {
             resposta.tipo = "dividas"; resposta.mensagem = "Lista de quem tá te devendo: 📜👇";
-        } else if (frase.includes("tarefa") || frase.includes("fazer") || frase.includes("fui") || frase.includes("irei") || frase.includes("lembretes")) {
+        } else if (frase.includes("tarefa") || frase.includes("fazer") || frase.includes("fui") || frase.includes("irei") || frase.includes("lembretes") || frase.includes("tenho")) {
             resposta.tipo = "tarefas"; resposta.mensagem = "Sua agenda de tarefas e registros: 🎯👇";
         } else if (frase.includes("ganhei") || frase.includes("recebi") || frase.includes("entrou")) {
             resposta.tipo = "entrada"; resposta.mensagem = "Dinheiro que entrou: 💸👇";
