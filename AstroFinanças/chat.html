@@ -1,187 +1,796 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Astro | Chat Inteligente</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
-        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
-        .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
-        .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .header-info { display: flex; flex-direction: column; }
-        .bot-name { font-weight: 600; font-size: 18px; letter-spacing: 0.5px; }
-        .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
-        .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
-        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .message.bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; color: #E5E7EB; }
-        .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
-        .message.temp { opacity: 0.6; font-style: italic; }
-        .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
-        .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); transition: border-color 0.3s; height: 50px; }
-        .input-wrapper:focus-within { border-color: #8B5CF6; }
-        .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
-        .chat-input::placeholder { color: #6B7280; }
-        .action-btn { background: transparent; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.3s, transform 0.2s; }
-        .action-btn:hover { color: #A78BFA; transform: scale(1.1); }
-        .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; width: 40px; height: 40px; border-radius: 50%; margin-left: 5px; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
-        .btn-send:hover { color: white; background: linear-gradient(135deg, #2563EB, #7C3AED); }
-        #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 5px; height: 100%; }
-        .bar { width: 4px; background-color: #EF4444; border-radius: 2px; animation: sound 0ms -800ms linear infinite alternate; }
-        @keyframes sound { 0% { opacity: 0.35; height: 4px; } 100% { opacity: 1; height: 22px; } }
-    </style>
-</head>
-<body>
-    <div class="app-container">
-        <header class="chat-header">
-            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
-            <div class="header-info">
-                <span class="bot-name">Astro Inteligente</span>
-                <span class="bot-status">Online</span>
-            </div>
-        </header>
-        <main class="chat-messages" id="chat-messages"></main>
-        <footer class="chat-input-area">
-            <div class="input-wrapper">
-                <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
-                <div id="voice-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-                <button class="action-btn btn-mic">🎙️</button>
-            </div>
-            <button class="action-btn btn-send" onclick="enviarMensagem()">➤</button>
-        </footer>
-    </div>
 
-    <script>
-        const dadosBrutos = localStorage.getItem('astro_usuario_logado');
-        let usuarioLogado = null;
-        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
-        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
-        
-        const nomeUsuario = usuarioLogado.nome;
-        const idUsuario = usuarioLogado.id;
-        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        let meuSupabase = window.supabase ? window.supabase.createClient(urlAstro, chaveAstro) : null;
-
-        function adicionarMensagem(texto, remetente, id = null) {
-            const container = document.getElementById('chat-messages');
-            const msg = document.createElement('div');
-            msg.className = `message ${remetente}`;
-            if (id) msg.id = id;
-            msg.textContent = texto;
-            container.appendChild(msg);
-            container.scrollTop = container.scrollHeight;
-            return msg;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
         }
 
+        body {
+            background-color: #0B0F19;
+            color: #FFFFFF;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 850px;
+            background: #111827;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .header-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+            .header-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+        .header-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bot-name {
+            font-weight: 600;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+        }
+
+        .bot-status {
+            font-size: 12px;
+            color: #10B981;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+            .bot-status::before {
+                content: '';
+                width: 6px;
+                height: 6px;
+                background-color: #10B981;
+                border-radius: 50%;
+                display: inline-block;
+            }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+            white-space: pre-wrap;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom-left-radius: 4px;
+            color: #E5E7EB;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: #FFFFFF;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+        }
+
+        .message.temp {
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .chat-input-area {
+            padding: 15px 20px;
+            background: #111827;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-wrapper {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            padding: 5px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: border-color 0.3s;
+            height: 50px;
+        }
+
+            .input-wrapper:focus-within {
+                border-color: #8B5CF6;
+            }
+
+        .chat-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 10px 0;
+            outline: none;
+            font-size: 15px;
+        }
+
+            .chat-input::placeholder {
+                color: #6B7280;
+            }
+
+        .action-btn {
+            background: transparent;
+            border: none;
+            color: #9CA3AF;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s, transform 0.2s;
+        }
+
+            .action-btn:hover {
+                color: #A78BFA;
+                transform: scale(1.1);
+            }
+
+        .btn-send {
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-left: 5px;
+            box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+        }
+
+            .btn-send:hover {
+                color: white;
+                background: linear-gradient(135deg, #2563EB, #7C3AED);
+            }
+
+        #voice-visualizer {
+            flex-grow: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            height: 100%;
+        }
+
+        .bar {
+            width: 4px;
+            background-color: #EF4444;
+            border-radius: 2px;
+            animation: sound 0ms -800ms linear infinite alternate;
+        }
+
+            .bar:nth-child(1) {
+                height: 4px;
+                animation-duration: 474ms;
+            }
+
+            .bar:nth-child(2) {
+                height: 12px;
+                animation-duration: 433ms;
+            }
+
+            .bar:nth-child(3) {
+                height: 22px;
+                animation-duration: 407ms;
+            }
+
+            .bar:nth-child(4) {
+                height: 12px;
+                animation-duration: 458ms;
+            }
+
+            .bar:nth-child(5) {
+                height: 4px;
+                animation-duration: 400ms;
+            }
+
+        @keyframes sound {
+            0% {
+                opacity: 0.35;
+                height: 4px;
+            }
+
+            100% {
+                opacity: 1;
+                height: 22px;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="app-container">
+
+        <header class="chat-header">
+
+            <div class="header-avatar">
+
+                <img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot">
+
+            </div>
+
+            <div class="header-info">
+
+                <span class="bot-name">Astro Inteligente</span>
+
+                <span class="bot-status">Online</span>
+
+            </div>
+
+        </header>
+
+
+
+        <main class="chat-messages" id="chat-messages"></main>
+
+
+
+        <footer class="chat-input-area">
+
+            <div class="input-wrapper">
+
+                <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
+
+                <div id="voice-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+
+                <button class="action-btn btn-mic">🎙️</button>
+
+            </div>
+
+            <button class="action-btn btn-send" onclick="enviarMensagem()">➤</button>
+
+        </footer>
+
+    </div>
+
+
+
+    <script>
+
+        const dadosBrutos = localStorage.getItem('astro_usuario_logado');
+
+        let usuarioLogado = null;
+
+        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
+
+        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
+
+
+
+        const nomeUsuario = usuarioLogado ? usuarioLogado.nome : 'Visitante';
+
+        const idUsuario = usuarioLogado ? usuarioLogado.id : null;
+
+
+
+        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
+
+        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
+
+        let meuSupabase = null;
+
+        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
+
+
+
+        let historicoConversa = [];
+
+
+
         document.addEventListener('DOMContentLoaded', () => {
-            adicionarMensagem(`E aí, ${nomeUsuario}! Pode falar comigo naturalmente. O que manda hoje? 🚀`, 'bot');
+
+            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos e agora cobro até quem te deve dinheiro. O que manda hoje? 🚀`;
+
+            adicionarMensagem(msgBoasVindas, 'bot');
+
         });
+
+
 
         function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
 
+
+
+        function adicionarMensagem(texto, remetente, id = null) {
+
+            const chatMessages = document.getElementById('chat-messages');
+
+            const msg = document.createElement('div');
+
+            msg.className = `message ${remetente}`;
+
+            if (id) msg.id = id;
+
+            msg.textContent = texto;
+
+            chatMessages.appendChild(msg);
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+
+
+            if (id === null) {
+
+                historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
+
+                if (historicoConversa.length > 6) historicoConversa.shift();
+
+            }
+
+
+
+            return msg;
+
+        }
+
+
+
+        function obterDataFiltro(periodo) {
+
+            const data = new Date();
+
+            if (periodo === 'hoje') { data.setHours(0, 0, 0, 0); }
+
+            else if (periodo === 'semana') { const dia = data.getDay(); data.setDate(data.getDate() - dia); data.setHours(0, 0, 0, 0); }
+
+            else if (periodo === 'mes') { data.setDate(1); data.setHours(0, 0, 0, 0); }
+
+            return data.getTime();
+
+        }
+
+
+
         let aguardandoLimpeza = false;
 
+
+
         async function enviarMensagem() {
-            const input = document.getElementById('message-input');
-            const texto = input.value.trim();
-            if(!texto) return;
-            adicionarMensagem(texto, 'user');
-            input.value = '';
 
-            let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
+            const messageInput = document.getElementById('message-input');
 
-            // --- SISTEMA DE LIMPEZA DO RAPHAEL (COM COFRE ADICIONADO) ---
-            if (aguardandoLimpeza) {
-                if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
-                    await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
-                    aguardandoLimpeza = false;
-                    setTimeout(() => adicionarMensagem(`🗑️ Histórico de finanças apagado com sucesso!`, 'bot'), 400);
-                    return;
-                } else if (textoTratado.includes('tarefa')) {
-                    await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
-                    aguardandoLimpeza = false;
-                    setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado com sucesso!`, 'bot'), 400);
-                    return;
-                } else if (textoTratado.includes('cofre') || textoTratado.includes('reserva')) {
-                    await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'reserva');
-                    aguardandoLimpeza = false;
-                    setTimeout(() => adicionarMensagem(`🗑️ Seu cofre foi zerado com sucesso!`, 'bot'), 400);
-                    return;
-                } else if (textoTratado.includes('cancelar') || textoTratado.includes('não') || textoTratado.includes('nao')) {
-                    aguardandoLimpeza = false;
-                    setTimeout(() => adicionarMensagem(`Operação cancelada!`, 'bot'), 400);
-                    return;
+            const texto = messageInput.value.trim();
+
+
+
+            if (texto !== '') {
+
+                adicionarMensagem(texto, 'user');
+
+                messageInput.value = '';
+
+
+
+                if (!meuSupabase) return;
+
+
+
+                let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
+
+
+
+                try {
+
+                    // LIMPEZA LOCAL DE EMERGÊNCIA
+
+                    if (aguardandoLimpeza) {
+
+                        if (textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
+
+                            await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
+
+                            aguardandoLimpeza = false;
+
+                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de finanças apagado com sucesso!`, 'bot'), 400);
+
+                            return;
+
+                        } else if (textoTratado.includes('tarefa')) {
+
+                            await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
+
+                            aguardandoLimpeza = false;
+
+                            setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado com sucesso!`, 'bot'), 400);
+
+                            return;
+
+                        } else if (textoTratado.includes('cancelar') || textoTratado.includes('não')) {
+
+                            aguardandoLimpeza = false;
+
+                            setTimeout(() => adicionarMensagem(`Operação cancelada!`, 'bot'), 400);
+
+                            return;
+
+                        }
+
+                    }
+
+
+
+                    if (textoTratado === 'limpar tudo' || textoTratado === 'apagar tudo' || textoTratado === 'limpar' || textoTratado === 'apagar') {
+
+                        aguardandoLimpeza = true;
+
+                        setTimeout(() => adicionarMensagem(`⚠️ Você ativou a limpeza total!\nO que deseja apagar?\n- "Finanças"\n- "Tarefas"\n- "Cancelar"`, 'bot'), 400);
+
+                        return;
+
+                    }
+
+                    if (textoTratado === 'limpar finanças' || textoTratado === 'limpar financas') {
+
+                        await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
+
+                        setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de finanças foi apagado com sucesso!`, 'bot'), 400);
+
+                        return;
+
+                    }
+
+                    if (textoTratado === 'limpar cofre' || textoTratado === 'limpar reserva' || textoTratado === 'zerar cofre') {
+                        await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'reserva');
+                        setTimeout(() => adicionarMensagem(`🗑️ Seu cofre foi zerado com sucesso!`, 'bot'), 400);
+                        return;
+                    }
+
+                    if (textoTratado === 'limpar tarefas') {
+
+                        await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
+
+                        setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de tarefas foi apagado com sucesso!`, 'bot'), 400);
+
+                        return;
+
+                    }
+
+
+
+                    const idCarregando = "msg-" + Date.now();
+
+                    adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
+
+
+
+                    const resAPI = await fetch('/api/cerebro', {
+
+                        method: 'POST',
+
+                        headers: { 'Content-Type': 'application/json' },
+
+                        body: JSON.stringify({
+
+                            texto: texto,
+
+                            nomeUsuario: nomeUsuario,
+
+                            historico: historicoConversa
+
+                        })
+
+                    });
+
+
+
+                    document.getElementById(idCarregando).remove();
+
+
+
+                    if (!resAPI.ok) {
+
+                        let msgErro = "Tente novamente daqui a pouco.";
+
+                        try {
+
+                            const erroDetalhado = await resAPI.json();
+
+                            msgErro = erroDetalhado.error || msgErro;
+
+                        } catch (e) { }
+
+                        adicionarMensagem(`⚠️ Falha na conexão: ${msgErro}`, 'bot');
+
+                        return;
+
+                    }
+
+
+
+                    const analise = await resAPI.json();
+
+
+
+                    // EXECUÇÃO NO SUPABASE
+
+                    if (analise.categoria === 'financa') {
+
+                        if (analise.valor === null || analise.valor === undefined) {
+
+                            adicionarMensagem("Putz, entendi que é sobre dinheiro, mas faltou me dizer o valor certinho. Pode mandar de novo com o número?", 'bot');
+
+                            return;
+
+                        }
+
+                        const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
+
+                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
+
+                        else adicionarMensagem(analise.mensagem, 'bot');
+
+
+
+                    } else if (analise.categoria === 'tarefa') {
+
+                        const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: analise.tipo || 'pendente' }]);
+
+                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
+
+                        else adicionarMensagem(analise.mensagem, 'bot');
+
+
+
+                    } else if (analise.categoria === 'exclusao') {
+
+                        if (!analise.termo_busca) {
+
+                            adicionarMensagem(analise.mensagem, 'bot');
+
+                            return;
+
+                        }
+
+                        const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos') ? 'financas' : 'tarefas';
+
+
+
+                        const { error } = await meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
+
+
+
+                        if (error) adicionarMensagem(`⚠️ Erro ao apagar no banco: ${error.message}`, 'bot');
+
+                        else adicionarMensagem(analise.mensagem, 'bot');
+
+
+
+                    } else if (analise.categoria === 'consulta') {
+
+
+
+                        // NOVO SISTEMA DE FILTRO PARA ACHAR DÍVIDAS E GANHOS (AGORA COM COFRE)
+                        let tabela = 'tarefas';
+                        let filtroStatus = 'pendente';
+
+                        if (analise.tipo === 'gastos') {
+                            tabela = 'financas';
+                            filtroStatus = 'saida';
+                        } else if (analise.tipo === 'dividas') {
+                            tabela = 'financas';
+                            filtroStatus = 'divida';
+                        } else if (analise.tipo === 'entrada' || analise.tipo === 'ganhos') {
+                            tabela = 'financas';
+                            filtroStatus = 'entrada';
+                        } else if (analise.tipo === 'reserva') {
+                            tabela = 'financas';
+                            filtroStatus = 'reserva';
+                        }
+
+                        const colunaBusca = tabela === 'financas' ? 'tipo' : 'status';
+                        const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(colunaBusca, filtroStatus);
+
+
+
+                        if (error) { adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'); return; }
+
+
+
+                        const timestampFiltro = obterDataFiltro(analise.periodo || 'hoje');
+
+                        let itensValidos = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
+
+
+
+                        if (itensValidos.length > 0) {
+
+                            if (tabela === 'financas') {
+
+                                let total = 0; let extrato = '';
+
+                                itensValidos.forEach(item => { total += item.valor; extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`; });
+
+                                adicionarMensagem(`${analise.mensagem}\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)}`, 'bot');
+
+                            } else {
+
+                                let lista = itensValidos.map(t => `• ${t.descricao}`).join('\n');
+
+                                adicionarMensagem(`${analise.mensagem}\n\n${lista}`, 'bot');
+
+                            }
+
+                        } else {
+
+                            adicionarMensagem(`Não encontrei nada registrado nesse período, ${nomeUsuario}! Pode ficar tranquilo. 😎`, 'bot');
+
+                        }
+
+                    } else {
+
+                        adicionarMensagem(analise.mensagem, 'bot');
+
+                    }
+
+
+
+                } catch (err) {
+
+                    console.error(err);
+
+                    adicionarMensagem("⚠️ Ocorreu um erro no processamento.", "bot");
+
                 }
+
             }
 
-            if (textoTratado === 'limpar tudo' || textoTratado === 'apagar tudo' || textoTratado === 'limpar' || textoTratado === 'apagar') {
-                aguardandoLimpeza = true;
-                setTimeout(() => adicionarMensagem(`⚠️ Você ativou a limpeza total!\nO que deseja apagar?\n- "Finanças"\n- "Tarefas"\n- "Cofre"\n- "Cancelar"`, 'bot'), 400);
-                return;
+        }
+
+
+
+        // MICROFONE
+
+        const btnMic = document.querySelector('.btn-mic');
+
+        const inputMensagem = document.getElementById('message-input');
+
+        const visualizador = document.getElementById('voice-visualizer');
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+
+
+        if (SpeechRecognition) {
+
+            const recognition = new SpeechRecognition(); recognition.continuous = false; recognition.lang = 'pt-BR';
+
+            let estaOuvindo = false, bloqueioClique = false;
+
+
+
+            function resetarVisual() {
+
+                btnMic.textContent = '🎙️'; btnMic.style.color = '#9CA3AF';
+
+                visualizador.style.display = 'none'; inputMensagem.style.display = 'block';
+
+                inputMensagem.placeholder = 'Converse comigo...'; estaOuvindo = false; bloqueioClique = false;
+
             }
 
-            if (textoTratado === 'limpar cofre' || textoTratado === 'limpar reserva' || textoTratado === 'zerar cofre') {
-                await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'reserva');
-                setTimeout(() => adicionarMensagem(`🗑️ Seu cofre foi zerado com sucesso! (Seus gastos e depósitos continuam aí)`, 'bot'), 400);
-                return;
-            }
 
-            if (textoTratado === 'limpar finanças' || textoTratado === 'limpar financas') {
-                await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario);
-                setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de finanças foi apagado com sucesso!`, 'bot'), 400);
-                return;
-            }
 
-            if (textoTratado === 'limpar tarefas') {
-                await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
-                setTimeout(() => adicionarMensagem(`🗑️ Todo o seu histórico de tarefas foi apagado com sucesso!`, 'bot'), 400);
-                return;
-            }
-            // --------------------------------------------------------
+            recognition.onstart = function () {
 
-            const idTemp = "msg-" + Date.now();
-            adicionarMensagem("Astro está pensando...", "bot temp", idTemp);
+                estaOuvindo = true; bloqueioClique = false;
 
-            try {
-                const res = await fetch('/api/cerebro', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ texto, nomeUsuario })
-                });
-                const analise = await res.json();
-                document.getElementById(idTemp).remove();
+                btnMic.textContent = '🔴'; btnMic.style.color = '#EF4444';
 
-                if (analise.categoria === 'financa') {
-                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, tipo: analise.tipo, valor: analise.valor }]);
-                    adicionarMensagem(analise.mensagem, 'bot');
-                } else if (analise.categoria === 'tarefa') {
-                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: 'pendente' }]);
-                    adicionarMensagem(analise.mensagem, 'bot');
-                } else if (analise.categoria === 'exclusao') {
-                    if (analise.termo_busca) {
-                         await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
-                         adicionarMensagem(analise.mensagem, 'bot');
-                    } else { adicionarMensagem(analise.mensagem, 'bot'); }
-                } else if (analise.categoria === 'consulta') {
-                    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
-                    let query = meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
-                    
-                    if (analise.tipo === 'gastos') query = query.eq('tipo', 'saida');
-                    else if (analise.tipo === 'entrada') query = query.eq('tipo', 'entrada');
-                    else if (analise.tipo === 'reserva') query = query.eq('tipo', 'reserva');
+                inputMensagem.style.display = 'none'; visualizador.style.display = 'flex';
 
-                    const { data } = await query;
-                    if(data && data.length > 0) {
-                        let total = 0, extrato = '';
-                        data.forEach(it => {
-                            if(tabela === 'financas') {
-                                total += it.valor || 0;
-                                const
+            };
+
+
+
+            recognition.onresult = function (event) { resetarVisual(); inputMensagem.value = event.results[0][0].transcript; enviarMensagem(); };
+
+            recognition.onerror = function () { resetarVisual(); };
+
+            recognition.onend = function () { resetarVisual(); };
+
+
+
+            btnMic.addEventListener('click', () => {
+
+                if (bloqueioClique) return; bloqueioClique = true;
+
+                if (estaOuvindo) recognition.stop(); else { try { recognition.start(); } catch (e) { resetarVisual(); } }
+
+            });
+
+        }
+
+    </script>
+
+</body>
+
+</html>
