@@ -15,14 +15,14 @@ module.exports = async function(req, res) {
     const valor = matchNumero ? parseFloat(matchNumero[0].replace(',', '.')) : null;
 
     let textoBase = texto.toLowerCase()
-        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|r\$|reais|exagerei|acho otimo|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|lembrete|me|de|fazer|guardei|guardar|poupei|economizei|come[çc]arei|proxima|semana|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta|oque|o que|tenho|mostre|mostrar|quando|qual dia|que dia|mandar|segunda|ter[çc]a|quarta|quinta|sexta|s[aá]bado|domingo|feira)\b/g, ' ');
+        .replace(/\b(ol[aá]|eu|que|gastei|comprei|paguei|custou|saiu|recebi|ganhei|entrou|vendi|hoje|ontem|amanh[aã]|r\$|reais|exagerei|acho otimo|com|na|no|o|a|para|desse|mes|fui|irei|vou|preciso|lembrar|lembre|lembrete|me|de|fazer|guardei|guardar|poupei|economizei|come[çc]arei|proxima|semana|juntei|juntar|junto|adicionei|depositei|depostei|deposito|conta|oque|o que|tenho|mostre|mostrar|quando|qual dia|que dia|mandar|segunda|ter[çc]a|quarta|quinta|sexta|s[aá]bado|domingo|feira|devedor|devedores)\b/g, ' ');
 
     let descFinanca = textoBase.replace(/\d+(?:[.,]\d+)?/g, '').replace(/\s+/g, ' ').trim();
-    let descTarefa = textoBase.replace(/\s+/g, ' ').trim(); 
-    
+    let descTarefa = textoBase.replace(/\s+/g, ' ').trim();
+
     descFinanca = descFinanca ? descFinanca.charAt(0).toUpperCase() + descFinanca.slice(1) : "";
     descTarefa = descTarefa ? descTarefa.charAt(0).toUpperCase() + descTarefa.slice(1) : "";
-    
+
     if (descFinanca === "") descFinanca = "Registro financeiro";
     if (descTarefa === "") descTarefa = "Lembrete";
 
@@ -38,6 +38,18 @@ module.exports = async function(req, res) {
         }
     }
 
+    const ehPergunta = frase.includes("?") || frase.includes("quem") || frase.includes("quanto") || frase.includes("quais") || frase.includes("qual") || frase.includes("oque") || frase.includes("o que") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo") || frase.includes("mostre") || frase.includes("mostrar") || frase.includes("quando") || frase.includes("que dia") || frase.includes("devedores");
+
+    let matchPagou = frase.match(/([a-zãõáéíóúç0-9\s]+)\s+(?:me\s+)?pagou/);
+    if (matchPagou && !frase.includes("quem")) {
+        let partesNome = matchPagou[1].trim().split(" ");
+        let nomeDevedor = partesNome[partesNome.length - 1]; 
+        if(nomeDevedor === "o" || nomeDevedor === "a" || nomeDevedor === "que" || nomeDevedor === "ja") nomeDevedor = partesNome[partesNome.length - 2] || nomeDevedor;
+        
+        resposta = { categoria: "exclusao", tipo: "financas", termo_busca: nomeDevedor, mensagem: `Justo! O ${nomeDevedor} honrou o compromisso. 🤝` };
+        return res.status(200).json(resposta);
+    }
+
     let matchQuantoDeve = frase.match(/quanto\s+([a-zãõáéíóúç\s]+)\s+me\s+deve/);
     if (matchQuantoDeve) {
         let nomeConsulta = matchQuantoDeve[1].trim();
@@ -45,28 +57,24 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    let matchPagou = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+pagou/);
-    if (matchPagou) {
-        let nomeDevedor = matchPagou[1].replace(/\b(o|a|que)\b/g, '').trim(); 
-        resposta = { categoria: "exclusao", tipo: "financas", termo_busca: nomeDevedor, mensagem: `Justo! O ${nomeDevedor} honrou o compromisso. 🤝` };
-        return res.status(200).json(resposta);
-    }
-
     if (frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+deve/) && valor) {
         let matchDeve = frase.match(/([a-zãõáéíóúç\s]+)\s+me\s+deve/);
-        let nomeDevedor = matchDeve[1].replace(/\b(o|a)\b/g, '').trim();
+        let partesNome = matchDeve[1].trim().split(" ");
+        let nomeDevedor = partesNome[partesNome.length - 1];
+        if(nomeDevedor === "o" || nomeDevedor === "a" || nomeDevedor === "que") nomeDevedor = partesNome[partesNome.length - 2] || nomeDevedor;
+        
         resposta = { categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: `Dívida de ${nomeDevedor}`, mensagem: `Tá no caderninho! ✍️ ${nomeDevedor} te deve R$ ${valor}.` };
         return res.status(200).json(resposta);
     }
 
-    if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo") || frase.includes("oque") || frase.includes("o que") || frase.includes("quais") || frase.includes("mostre") || frase.includes("mostrar") || frase.includes("quando") || frase.includes("que dia") || frase.includes("qual dia")) {
+    if (ehPergunta) {
         resposta.categoria = "consulta";
         resposta.periodo = frase.includes("semana") ? "semana" : frase.includes("mes") ? "mes" : "hoje";
-        
+
         if (frase.includes("guardado") || frase.includes("cofre") || frase.includes("reserva") || frase.includes("guardei") || frase.includes("guardar") || frase.includes("poupanca") || frase.includes("poupei") || frase.includes("juntei") || frase.includes("juntar") || frase.includes("junto") || frase.includes("deposit")) {
             resposta.tipo = "reserva"; resposta.mensagem = "Abrindo o cofre pra ver como tá a sua construção de riqueza: 🏦👇";
-        } else if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida")) {
-            resposta.tipo = "dividas"; resposta.mensagem = "Lista de quem tá te devendo: 📜👇";
+        } else if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida") || frase.includes("devedor") || frase.includes("pagou") || frase.includes("pagaram")) {
+            resposta.tipo = "dividas"; resposta.mensagem = "Lista de quem tá no caderninho (Dívidas): 📜👇";
         } else if (frase.includes("tarefa") || frase.includes("fazer") || frase.includes("fui") || frase.includes("irei") || frase.includes("lembretes") || frase.includes("tenho") || frase.includes("quando") || frase.includes("que dia")) {
             resposta.tipo = "tarefas"; resposta.mensagem = "Buscando na sua agenda de tarefas: 🎯👇";
         } else if (frase.includes("ganhei") || frase.includes("recebi") || frase.includes("entrou")) {
