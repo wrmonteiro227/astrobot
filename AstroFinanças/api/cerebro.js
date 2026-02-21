@@ -23,7 +23,7 @@ module.exports = async function(req, res) {
     descFinanca = descFinanca ? descFinanca.charAt(0).toUpperCase() + descFinanca.slice(1) : "";
     descTarefa = descTarefa ? descTarefa.charAt(0).toUpperCase() + descTarefa.slice(1) : "";
     
-    if (descFinanca === "") descFinanca = "Registro financeiro";
+    if (descFinanca === "") descFinanca = "Registro";
     if (descTarefa === "") descTarefa = "Lembrete";
 
     let resposta = {
@@ -52,18 +52,18 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    // CORREÇÃO: AGORA ELE ENTENDE "QUANTO GUARDEI" E "QUANTO DEPOSITEI"
+    // CONSULTAS: "DEPOSITEI" AGORA FAZ PARTE DO COFRE
     if (frase.includes("quanto") || frase.includes("quem") || frase.includes("extrato") || frase.includes("lista") || frase.includes("resumo")) {
         resposta.categoria = "consulta";
         resposta.periodo = frase.includes("semana") ? "semana" : frase.includes("mes") ? "mes" : "hoje";
         
-        if (frase.includes("guardado") || frase.includes("cofre") || frase.includes("reserva") || frase.includes("guardei") || frase.includes("poupanca") || frase.includes("juntei") || frase.includes("juntar") || frase.includes("junto")) {
+        if (frase.includes("guardado") || frase.includes("cofre") || frase.includes("reserva") || frase.includes("guardei") || frase.includes("guardar") || frase.includes("poupanca") || frase.includes("poupei") || frase.includes("juntei") || frase.includes("juntar") || frase.includes("junto") || frase.includes("deposit")) {
             resposta.tipo = "reserva"; resposta.mensagem = "Abrindo o cofre pra ver como tá a sua construção de riqueza: 🏦👇";
         } else if (frase.includes("deve") || frase.includes("devendo") || frase.includes("divida")) {
             resposta.tipo = "dividas"; resposta.mensagem = "Lista de quem tá te devendo: 📜👇";
         } else if (frase.includes("tarefa") || frase.includes("fazer") || frase.includes("fui") || frase.includes("irei") || frase.includes("lembretes")) {
             resposta.tipo = "tarefas"; resposta.mensagem = "Sua agenda de tarefas e registros: 🎯👇";
-        } else if (frase.includes("ganhei") || frase.includes("recebi") || frase.includes("depositei") || frase.includes("deposito")) {
+        } else if (frase.includes("ganhei") || frase.includes("recebi") || frase.includes("entrou")) {
             resposta.tipo = "entrada"; resposta.mensagem = "Dinheiro que entrou: 💸👇";
         } else {
             resposta.tipo = "gastos"; resposta.mensagem = "Resumo do que saiu do bolso: 📊👇";
@@ -78,7 +78,8 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    if (frase.includes("guardei") || frase.includes("guardar") || frase.includes("poupei") || frase.includes("economizei") || frase.includes("cofre") || frase.includes("juntei") || frase.includes("juntar")) {
+    // REGISTROS: "DEPOSITEI" AGORA GUARDA NO COFRE
+    if (frase.includes("guardei") || frase.includes("guardar") || frase.includes("poupei") || frase.includes("economizei") || frase.includes("cofre") || frase.includes("juntei") || frase.includes("juntar") || frase.includes("deposit")) {
         if (valor) {
             resposta = { categoria: "financa", tipo: "reserva", valor: valor, descricao_limpa: descFinanca, mensagem: sortearMsg(msgPoupanca, valor) };
         } else {
@@ -87,7 +88,7 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
     }
 
-    if (frase.includes("recebi") || frase.includes("ganhei") || frase.includes("entrou") || frase.includes("vendi") || frase.includes("adicionei") || frase.includes("depositei") || frase.includes("depostei") || frase.includes("deposito")) {
+    if (frase.includes("recebi") || frase.includes("ganhei") || frase.includes("entrou") || frase.includes("vendi") || frase.includes("adicionei")) {
         resposta = { categoria: "financa", tipo: "entrada", valor: valor, descricao_limpa: descFinanca, mensagem: valor ? sortearMsg(msgGanhos, valor) : "Faltou o número!" };
     }
     else if (frase.includes("gastei") || frase.includes("comprei") || frase.includes("paguei") || frase.includes("custou") || frase.includes("saiu")) {
