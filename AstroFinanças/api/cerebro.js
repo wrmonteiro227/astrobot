@@ -1,4 +1,14 @@
 module.exports = async function(req, res) {
+    // 1. CRACHÁS DE AUTORIZAÇÃO (CORS) - Impede o erro de conexão!
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // 2. LIBERAÇÃO DO NAVEGADOR
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     if (req.method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
     
     try {
@@ -34,13 +44,11 @@ module.exports = async function(req, res) {
             mensagem: `Opa, parceiro! Sobre esse assunto eu não vou conseguir te ajudar. Minha missão aqui é única: tirar o peso das suas costas e organizar as finanças, reservas e tarefas que sobrecarregam o seu dia a dia. Manda aí um gasto, um ganho, um valor guardado ou um lembrete pra gente focar no que importa! 🚀💼`
         };
 
-        // SAUDAÇÕES
+        // SAUDAÇÕES E ATALHOS DIRETOS
         if (/^(ol[aá]|oi|bom dia|boa tarde|boa noite)( astro)?$/i.test(frase)) {
             resposta = { categoria: "conversa", mensagem: `E aí, parceiro! O Astro tá na área. Pronto pra anotar seus gastos, tarefas, cobrar dívidas e trancar grana no cofre. O que manda hoje? 🚀` };
             return res.status(200).json(resposta);
         }
-
-        // ATALHOS DIRETOS
         if (/^(tarefa|tarefas)$/i.test(frase)) {
             resposta = { categoria: "conversa", mensagem: `🎯 Certo, chefe! Você quer **ver sua agenda** de tarefas ou **registrar uma nova** missão?` };
             return res.status(200).json(resposta);
@@ -142,7 +150,6 @@ module.exports = async function(req, res) {
         return res.status(200).json(resposta);
         
     } catch (erro) {
-        // Se der qualquer erro no servidor, ele não desliga, só avisa a gente
         console.error("Erro interno no cérebro:", erro);
         return res.status(500).json({ erro: "Erro interno no processamento", detalhes: erro.message });
     }
