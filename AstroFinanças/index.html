@@ -6,9 +6,22 @@
     <title>Astro Finanças</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
-        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: #0B0F19;
+            color: #FFFFFF;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
         .app-container {
             width: 100%;
             max-width: 420px;
@@ -21,6 +34,15 @@
             position: relative;
             overflow-y: auto;
         }
+
+            .app-container::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .app-container::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+            }
 
         .hero-section {
             padding: 40px 20px 20px;
@@ -47,21 +69,200 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .subtitle { color: #9CA3AF; font-size: 15px; line-height: 1.5; margin-bottom: 25px; }
-        .features { padding: 0 25px; margin-bottom: 30px; display: flex; flex-direction: column; gap: 15px; }
-        .feature-item { display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); }
-        .feature-icon { font-size: 24px; }
-        .feature-text { font-size: 15px; color: #E5E7EB; }
-        .checkout-section { margin-top: auto; padding: 25px; background: rgba(17, 24, 39, 0.95); border-top: 1px solid rgba(255,255,255,0.05); text-align: center; }
-        .price { font-size: 32px; font-weight: 600; color: #FFFFFF; margin-bottom: 5px; }
-        .price span { font-size: 14px; color: #9CA3AF; font-weight: 400; }
-        
-        .btn-primary {
-            width: 100%; padding: 16px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: none; border-radius: 12px; color: white; font-weight: 600; font-size: 16px; cursor: pointer; margin-top: 15px; margin-bottom: 15px; transition: 0.3s; text-decoration: none; display: inline-block; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+        .subtitle {
+            color: #9CA3AF;
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 25px;
         }
-        .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; }
-        .link-login { color: #9CA3AF; text-decoration: none; font-size: 14px; display: block; }
-        .link-login span { color: #3B82F6; font-weight: 600; }
+
+        .features {
+            padding: 0 25px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .feature-icon {
+            font-size: 24px;
+        }
+
+        .feature-text {
+            font-size: 15px;
+            color: #E5E7EB;
+        }
+
+        .checkout-section {
+            padding: 25px;
+            background: rgba(17, 24, 39, 0.95);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            text-align: center;
+        }
+
+        .price {
+            font-size: 32px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 5px;
+        }
+
+            .price span {
+                font-size: 14px;
+                color: #9CA3AF;
+                font-weight: 400;
+            }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            transition: 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+        }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                opacity: 0.9;
+            }
+
+        .link-login {
+            color: #9CA3AF;
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+        }
+
+            .link-login span {
+                color: #3B82F6;
+                font-weight: 600;
+            }
+
+        /* --- SESSÃO TUTORIAL (MOCKUP CELULAR) --- */
+        .tutorial-section {
+            padding: 35px 20px 50px;
+            background: #0B0F19;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .tutorial-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: center;
+            color: #FFFFFF;
+        }
+
+        .tutorial-subtitle {
+            text-align: center;
+            color: #9CA3AF;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        /* A carcaça do celular */
+        .phone-frame {
+            position: relative;
+            max-width: 320px;
+            height: 480px;
+            margin: 0 auto;
+            background: #111827;
+            border: 8px solid #1F2937;
+            border-radius: 36px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 15px rgba(255,255,255,0.05);
+            overflow: hidden;
+        }
+
+        /* O entalhe da câmera (notch/dynamic island) */
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 25px;
+            background: #1F2937;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            z-index: 10;
+        }
+
+        /* A tela do celular onde rola o chat */
+        .phone-screen {
+            height: 100%;
+            padding: 40px 15px 15px;
+            overflow-y: auto;
+            background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
+        }
+
+            .phone-screen::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .phone-screen::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+            }
+
+        .tutorial-chat-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-category {
+            text-align: center;
+            font-size: 11px;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        .msg {
+            max-width: 88%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: #FFFFFF;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+        }
+
+        .msg-bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom-left-radius: 4px;
+            color: #E5E7EB;
+        }
     </style>
 </head>
 <body>
@@ -73,10 +274,10 @@
         </div>
 
         <div class="features">
-            <div class="feature-item"><span class="feature-icon">💰</span><span class="feature-text">Controle de Gastos</span></div>
-            <div class="feature-item"><span class="feature-icon">📋</span><span class="feature-text">Gestão de Tarefas</span></div>
-            <div class="feature-item"><span class="feature-icon">🎙️</span><span class="feature-text">Entende Áudios</span></div>
-            <div class="feature-item"><span class="feature-icon">📊</span><span class="feature-text">Relatórios Automáticos</span></div>
+            <div class="feature-item"><span class="feature-icon">💰</span><span class="feature-text">Controle de Gastos e Ganhos</span></div>
+            <div class="feature-item"><span class="feature-icon">🔒</span><span class="feature-text">Cofre Inteligente (Reserva)</span></div>
+            <div class="feature-item"><span class="feature-icon">📋</span><span class="feature-text">Agenda e Cobranças</span></div>
+            <div class="feature-item"><span class="feature-icon">🎙️</span><span class="feature-text">Comandos por Áudio</span></div>
         </div>
 
         <div class="checkout-section">
@@ -84,6 +285,45 @@
             <a href="registro.html" class="btn-primary">Assine aqui</a>
             <a href="login.html" class="link-login">Já é assinante? <span>Faça login</span></a>
         </div>
+
+        <div class="tutorial-section">
+            <h2 class="tutorial-title">💡 Como usar o Astro?</h2>
+            <p class="tutorial-subtitle">Role a tela do celular abaixo e veja como é fácil organizar a vida:</p>
+
+            <div class="phone-frame">
+                <div class="phone-notch"></div>
+                <div class="phone-screen">
+                    <div class="tutorial-chat-box">
+
+                        <div class="chat-category">💰 Finanças do dia a dia</div>
+                        <div class="msg msg-user">Gastei 50 com lanche</div>
+                        <div class="msg msg-bot">Anotado! R$ 50 indo embora. 💸</div>
+                        <div class="msg msg-user">Recebi 150 do freela</div>
+                        <div class="msg msg-bot">Boa! R$ 150 na conta. 🤑</div>
+
+                        <div class="chat-category">🔒 Guardando Dinheiro</div>
+                        <div class="msg msg-user">Guardei 200 reais hoje</div>
+                        <div class="msg msg-bot">Aí sim, parceiro! R$ 200 guardados no cofre. Estamos mais perto do objetivo! 💰🔒</div>
+                        <div class="msg msg-user">Quanto juntei?</div>
+                        <div class="msg msg-bot">Abrindo o cofre pra ver como tá a sua construção de riqueza: 🏦👇<br><br>R$ 200.00 - Registro<br>💰 Total: R$ 200.00</div>
+
+                        <div class="chat-category">📜 Cobrança e Agenda</div>
+                        <div class="msg msg-user">Bite me deve 100</div>
+                        <div class="msg msg-bot">Tá no caderninho! ✍️ bite te deve R$ 100.</div>
+                        <div class="msg msg-user">Quem me deve?</div>
+                        <div class="msg msg-bot">Lista de quem tá no caderninho (Dívidas): 📜👇<br><br>R$ 100.00 - Dívida de bite<br>💰 Total: R$ 100.00</div>
+                        <div class="msg msg-user">O que tenho para fazer hoje?</div>
+                        <div class="msg msg-bot">Buscando na sua agenda de tarefas: 🎯👇<br><br>• Ir ao banco</div>
+
+                        <div class="chat-category">🗑️ Controle Total</div>
+                        <div class="msg msg-user">Limpar tudo</div>
+                        <div class="msg msg-bot">⚠️ Para iniciar a limpeza de forma segura, me envie somente a palavra "limpar" ou "apagar".</div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </body>
 </html>
