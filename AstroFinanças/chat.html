@@ -117,12 +117,21 @@
         }
 
         function obterDataFiltro(periodo) {
-            const data = new Date();
-            if (periodo === 'hoje') { data.setHours(0, 0, 0, 0); }
-            else if (periodo === 'semana') { const dia = data.getDay(); data.setDate(data.getDate() - dia); data.setHours(0, 0, 0, 0); }
-            else if (periodo === 'mes') { data.setDate(1); data.setHours(0, 0, 0, 0); }
-            return data.getTime();
-        }
+        if (periodo === 'tudo') return 0;
+
+    const data = new Date();
+    if (periodo === 'hoje') { 
+        data.setHours(0, 0, 0, 0); 
+    } else if (periodo === 'semana') { 
+        const dia = data.getDay(); 
+        data.setDate(data.getDate() - dia); 
+        data.setHours(0, 0, 0, 0); 
+    } else if (periodo === 'mes') { 
+        data.setDate(1); 
+        data.setHours(0, 0, 0, 0); 
+    }
+    return data.getTime();
+}
 
         let aguardandoLimpeza = false;
 
@@ -320,3 +329,4 @@
     </script>
 </body>
 </html>
+
