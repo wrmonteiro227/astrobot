@@ -431,7 +431,7 @@
                     adicionarMensagem("Entendido! Já anotei essa tarefa para você. ✅", 'bot');
 
                 } else if (analise.categoria === 'exclusao') {
-                    // --- CORREÇÃO TONY STARK: SNIPER COM FILTRO DE TIPO ---
+                    // Lógica Sniper Consolidada (Proteção para buscas exatas como o 1245)
                     const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
                     let query = meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario);
 
