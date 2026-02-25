@@ -13,15 +13,14 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
+        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
         
-        /* Estilo da Tela de Bloqueio (Vencimento) */
+        /* Tela de Bloqueio (Vencimento) */
         #lock-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0B0F19; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
         .lock-icon { font-size: 60px; margin-bottom: 20px; }
         .lock-title { font-size: 24px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #FF4B2B, #FF416C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .lock-text { color: #9CA3AF; margin-bottom: 30px; line-height: 1.5; }
-        .btn-renew { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 18px 30px; border-radius: 15px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); transition: transform 0.2s; }
-        .btn-renew:active { transform: scale(0.95); }
+        .btn-renew { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 18px 30px; border-radius: 15px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); transition: transform 0.2s; border: none; cursor: pointer; }
 
         .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
         .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
@@ -31,26 +30,28 @@
         .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
         .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
         
-        #btn-install { display: none; margin-left: auto; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: transform 0.2s; }
+        #btn-install { display: none; margin-left: auto; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; }
 
         .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; word-wrap: break-word; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .message.bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; color: #E5E7EB; }
         .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
         .message.temp { opacity: 0.6; font-style: italic; }
         
         .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
-        .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); transition: border-color 0.3s; height: 50px; }
-        .input-wrapper:focus-within { border-color: #8B5CF6; }
+        .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); height: 50px; }
         .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
-        .chat-input::placeholder { color: #6B7280; }
-        .action-btn-chat { background: transparent; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.3s, transform 0.2s; }
-        .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; width: 40px; height: 40px; border-radius: 50%; margin-left: 5px; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
+        .action-btn-chat { background: transparent; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; }
 
         #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 4px; height: 40px; }
         .bar { width: 3px; background-color: #EF4444; border-radius: 2px; height: 4px; }
         .is-recording .bar { animation: sound 0.5s infinite alternate; }
+        .bar:nth-child(1) { animation-duration: 0.4s; }
+        .bar:nth-child(2) { animation-duration: 0.6s; }
+        .bar:nth-child(3) { animation-duration: 0.5s; }
+        .bar:nth-child(4) { animation-duration: 0.7s; }
+        .bar:nth-child(5) { animation-duration: 0.4s; }
         @keyframes sound { 0% { height: 4px; opacity: 0.35; } 100% { height: 28px; opacity: 1; } }
     </style>
 </head>
@@ -60,14 +61,12 @@
         <div id="lock-screen">
             <div class="lock-icon">🔒</div>
             <h2 class="lock-title">Assinatura Vencida</h2>
-            <p class="lock-text">Para continuar usando a Inteligência do Astro e não perder seus registros, renove seu acesso mensal agora.</p>
-            <a href="https://wrmonteiro227-astrobot.vercel.app/registro.html" class="btn-renew">Renovar Acesso - R$ 14,99</a>
+            <p class="lock-text">Seu período expirou. Renove agora para continuar usando o Astro.</p>
+            <button onclick="logoutERenovar()" class="btn-renew">Renovar Acesso - R$ 14,99</button>
         </div>
 
         <header class="chat-header">
-            <div class="header-avatar">
-                <img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot">
-            </div>
+            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
             <div class="header-info">
                 <span class="bot-name">Astro Inteligente</span>
                 <span class="bot-status">Online</span>
@@ -85,24 +84,30 @@
                 </div>
                 <button class="action-btn-chat btn-mic">🎙️</button>
             </div>
-            <button class="action-btn-chat btn-send" onclick="enviarMensagem()">➤</button>
+            <button class="action-btn-chat" style="color: #3B82F6" onclick="enviarMensagem()">➤</button>
         </footer>
     </div>
 
     <script>
+        // --- CONFIGURAÇÃO E LOGIN ---
+        function logoutERenovar() {
+            localStorage.removeItem('astro_usuario_logado');
+            window.location.href = 'index.html';
+        }
+
         const dadosBrutos = localStorage.getItem('astro_usuario_logado');
         let usuarioLogado = null;
-        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
+        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { }
         if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
 
-        const nomeUsuario = usuarioLogado ? usuarioLogado.nome : 'Visitante';
-        const idUsuario = usuarioLogado ? usuarioLogado.id : null;
-
+        const idUsuario = usuarioLogado.id;
+        const nomeUsuario = usuarioLogado.nome;
         const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         let meuSupabase = null;
-        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
+        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { }
 
+        // --- CADEADO ---
         async function validarVencimento() {
             if (!meuSupabase || !idUsuario) return;
             const { data } = await meuSupabase.from('clientes').select('data_vencimento').eq('id', idUsuario).single();
@@ -117,7 +122,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             validarVencimento();
-            adicionarMensagem(`E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos, cobro quem te deve e agora temos o **Cofre**! 💰🔒 O que manda hoje? 🚀`, 'bot');
+            adicionarMensagem(`E aí, ${nomeUsuario}! O que vamos organizar hoje? 🚀`, 'bot');
         });
 
         function adicionarMensagem(texto, remetente, id = null) {
@@ -132,6 +137,7 @@
                 historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
                 if (historicoConversa.length > 6) historicoConversa.shift();
             }
+            return msg;
         }
 
         function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
@@ -153,21 +159,22 @@
                     const labels = { '1': 'GASTOS', '2': 'GANHOS', '3': 'tarefas', '4': 'cofre', '5': 'contas a pagar', '6': 'dívidas dos outros' };
                     
                     if (tipos[textoTratado]) {
-                        // Ajuste aqui: trocado 'types' por 'tipos'
                         await meuSupabase.from('financas').delete().eq('tipo', tipos[textoTratado]).eq('cliente_id', idUsuario);
                     } else if (textoTratado === '3') {
                         await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
                     } else if (textoTratado === '7') {
                         aguardandoLimpeza = false; adicionarMensagem("Operação cancelada! 👍", 'bot'); return;
+                    } else {
+                        adicionarMensagem("⚠️ Opção inválida. Digite de 1 a 7.", "bot"); return;
                     }
                     aguardandoLimpeza = false;
-                    setTimeout(() => adicionarMensagem(`🗑️ Histórico de ${labels[textoTratado] || 'itens'} apagado!`, 'bot'), 400);
+                    setTimeout(() => adicionarMensagem(`🗑️ Histórico de ${labels[textoTratado]} apagado com sucesso!`, 'bot'), 400);
                     return;
                 }
 
                 if (textoTratado === 'limpar' || textoTratado === 'apagar') {
                     aguardandoLimpeza = true;
-                    adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que deseja zerar?\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot');
+                    adicionarMensagem(`⚠️ MODO DE LIMPEZA\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot');
                     return;
                 }
 
@@ -196,6 +203,8 @@
                     else if (analise.tipo === 'dividas') { tabela = 'financas'; filtro = 'divida'; }
                     else if (analise.tipo === 'entrada') { tabela = 'financas'; filtro = 'entrada'; }
                     else if (analise.tipo === 'reserva') { tabela = 'financas'; filtro = 'reserva'; }
+                    else if (analise.tipo === 'minhas_dividas') { tabela = 'financas'; filtro = 'minhas_dividas'; }
+
                     const { data } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(tabela === 'financas' ? 'tipo' : 'status', filtro);
                     if (data && data.length > 0) {
                         let res = analise.mensagem + "\n\n";
@@ -208,31 +217,55 @@
             } catch (e) { adicionarMensagem("⚠️ Erro no processamento.", "bot"); }
         }
 
+        // --- MICROFONE E ONDAS ---
         const btnMic = document.querySelector('.btn-mic');
+        const inputMensagem = document.getElementById('message-input');
+        const visualizador = document.getElementById('voice-visualizer');
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
         if (SR) {
             const rec = new SR(); rec.lang = 'pt-BR';
-            btnMic.addEventListener('click', () => { rec.start(); btnMic.textContent = '🔴'; });
-            rec.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; enviarMensagem(); };
-            rec.onend = () => { btnMic.textContent = '🎙️'; };
+            let ouvindo = false;
+
+            btnMic.addEventListener('click', () => { 
+                if (ouvindo) rec.stop(); else rec.start(); 
+            });
+
+            rec.onstart = () => {
+                ouvindo = true; btnMic.textContent = '🔴';
+                inputMensagem.style.display = 'none'; visualizador.style.display = 'flex';
+                visualizador.classList.add('is-recording');
+            };
+
+            rec.onresult = (e) => {
+                inputMensagem.value = e.results[0][0].transcript;
+                resetVisual(); enviarMensagem();
+            };
+
+            rec.onend = () => resetVisual();
+            rec.onerror = () => resetVisual();
+
+            function resetVisual() {
+                ouvindo = false; btnMic.textContent = '🎙️';
+                inputMensagem.style.display = 'block'; visualizador.style.display = 'none';
+                visualizador.classList.remove('is-recording');
+            }
         }
 
+        // --- PWA E IPHONE ---
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+
         let promptI;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault(); promptI = e; document.getElementById('btn-install').style.display = 'block';
         });
         document.getElementById('btn-install').addEventListener('click', () => { if (promptI) promptI.prompt(); });
-        
-        // ==========================================
-        // 🍎 DICA DE INSTALAÇÃO PARA IPHONE (iOS) 🍎
-        // ==========================================
+
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-
         if (isIOS && !isStandalone) {
             setTimeout(() => {
-                adicionarMensagem("💡 Vi que você está no iPhone! Para instalar o Astro como um Aplicativo: \n\n1️⃣ Clique no botão de compartilhar (o quadrado com uma seta para cima no Safari).\n2️⃣ Role para baixo e clique em 'Adicionar à Tela de Início'. 📲", "bot");
+                adicionarMensagem("💡 Dica para iPhone: Toque no ícone de compartilhar (quadrado com seta) e depois em 'Adicionar à Tela de Início' para instalar o Astro! 📲", "bot");
             }, 6000);
         }
     </script>
