@@ -116,7 +116,6 @@
             return msg;
         }
 
-        // Função ajustada para buscar TODO o histórico (periodo 'tudo')
         function obterDataFiltro(periodo) {
             if (periodo === 'tudo') return 0; 
             const data = new Date();
@@ -141,48 +140,54 @@
                 let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // MÁQUINA DE ESTADO DO MENU DE LIMPEZA V6 (COM AS 6 OPÇÕES)
+                    // MÁQUINA DE ESTADO DO MENU DE LIMPEZA V7 (7 OPÇÕES SEPARADAS)
                     if (aguardandoLimpeza) {
-                        if (textoTratado === '1' || textoTratado.includes('finança') || textoTratado.includes('financa') || textoTratado.includes('gasto')) {
-                            // Apaga apenas entrada e saida (Preserva dívidas e reservas)
-                            await meuSupabase.from('financas').delete().in('tipo', ['entrada', 'saida']).eq('cliente_id', idUsuario);
+                        if (textoTratado === '1' || textoTratado.includes('gasto') || textoTratado.includes('saida') || textoTratado.includes('saídas')) {
+                            // Apaga APENAS os GASTOS
+                            await meuSupabase.from('financas').delete().eq('tipo', 'saida').eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`🗑️ Entradas e saídas apagadas com sucesso!`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`🗑️ Seu histórico de GASTOS foi apagado com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '2' || textoTratado.includes('tarefa')) {
+                        } else if (textoTratado === '2' || textoTratado.includes('ganho') || textoTratado.includes('entrada') || textoTratado.includes('recebido')) {
+                            // Apaga APENAS os GANHOS/ENTRADAS
+                            await meuSupabase.from('financas').delete().eq('tipo', 'entrada').eq('cliente_id', idUsuario);
+                            aguardandoLimpeza = false;
+                            setTimeout(() => adicionarMensagem(`🗑️ Seu histórico de GANHOS foi apagado com sucesso!`, 'bot'), 400);
+                            return;
+                        } else if (textoTratado === '3' || textoTratado.includes('tarefa')) {
                             await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '3' || textoTratado.includes('cofre') || textoTratado.includes('reserva')) {
+                        } else if (textoTratado === '4' || textoTratado.includes('cofre') || textoTratado.includes('reserva')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'reserva');
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Seu cofre foi zerado com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '4' || textoTratado.includes('quem eu devo') || textoTratado.includes('minhas contas')) {
+                        } else if (textoTratado === '5' || textoTratado.includes('quem eu devo') || textoTratado.includes('minhas contas')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'minhas_dividas');
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Suas contas a pagar (Quem eu devo) foram apagadas com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '5' || textoTratado.includes('quem me deve') || textoTratado.includes('caderninho')) {
+                        } else if (textoTratado === '6' || textoTratado.includes('quem me deve') || textoTratado.includes('caderninho')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'divida');
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ As dívidas dos outros (Quem me deve) foram apagadas com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '6' || textoTratado.includes('cancelar') || textoTratado.includes('não')) {
+                        } else if (textoTratado === '7' || textoTratado.includes('cancelar') || textoTratado.includes('não')) {
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`Operação cancelada! 👍`, 'bot'), 400);
                             return;
                         } else {
-                            setTimeout(() => adicionarMensagem(`⚠️ Opção inválida. Digite um número de 1 a 6.`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`⚠️ Opção inválida. Digite um número de 1 a 7.`, 'bot'), 400);
                             return;
                         }
                     }
 
-                    // GATILHO DO MENU DE LIMPEZA V6
+                    // GATILHO DO MENU DE LIMPEZA V7
                     if (textoTratado === 'limpar' || textoTratado === 'apagar' || textoTratado === 'limpar tudo') {
                         aguardandoLimpeza = true;
-                        setTimeout(() => adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que você deseja zerar?\n\n1️⃣ Finanças (Entradas e Saídas)\n2️⃣ Tarefas\n3️⃣ Cofre (Reserva)\n4️⃣ Quem eu devo (Minhas Contas)\n5️⃣ Quem me deve (Caderninho)\n6️⃣ Cancelar\n\n*(Para apagar um item específico, cancele isso e digite "apagar [nome]")*`, 'bot'), 400);
+                        setTimeout(() => adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que você deseja zerar?\n\n1️⃣ Gastos (Saídas)\n2️⃣ Ganhos (Entradas)\n3️⃣ Tarefas\n4️⃣ Cofre (Reserva)\n5️⃣ Quem eu devo (Minhas Contas)\n6️⃣ Quem me deve (Caderninho)\n7️⃣ Cancelar\n\n*(Para apagar um item específico, cancele isso e digite "apagar [nome]")*`, 'bot'), 400);
                         return;
                     }
 
@@ -223,7 +228,6 @@
                     } else if (analise.categoria === 'exclusao') {
                         if (!analise.termo_busca) { adicionarMensagem(analise.mensagem, 'bot'); return; }
                         
-                        // Direciona para a tabela certa baseada na intenção
                         const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos' || analise.tipo === 'minhas_dividas') ? 'financas' : 'tarefas';
                         
                         const { error } = await meuSupabase.from(tabela).delete()
