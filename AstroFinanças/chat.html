@@ -4,23 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Astro | Chat Inteligente</title>
-
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#111827">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
-        
         #lock-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0B0F19; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
         .lock-icon { font-size: 60px; margin-bottom: 20px; }
         .lock-title { font-size: 24px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #FF4B2B, #FF416C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .lock-text { color: #9CA3AF; margin-bottom: 30px; line-height: 1.5; }
         .btn-renew { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 15px 30px; border-radius: 15px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); border: none; cursor: pointer; }
-
         .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
         .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
         .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -29,18 +25,15 @@
         .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
         .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
         #btn-install { display: none; margin-left: auto; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; }
-
         .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
         .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .message.bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; color: #E5E7EB; }
         .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
         .message.temp { opacity: 0.6; font-style: italic; }
-        
         .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
         .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); height: 50px; }
         .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
-
         #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 4px; height: 40px; }
         .bar { width: 3px; background-color: #EF4444; border-radius: 2px; height: 4px; }
         .is-recording .bar { animation: sound 0.5s infinite alternate; }
@@ -53,7 +46,6 @@
     </style>
 </head>
 <body>
-
     <div class="app-container">
         <div id="lock-screen">
             <div class="lock-icon">🔒</div>
@@ -61,18 +53,12 @@
             <p class="lock-text">Para continuar usando a Inteligência do Astro e não perder seus registros, renove seu acesso mensal agora.</p>
             <button onclick="logoutERenovar()" class="btn-renew">Renovar Acesso - R$ 14,99</button>
         </div>
-        
         <header class="chat-header">
             <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
-            <div class="header-info">
-                <span class="bot-name">Astro Inteligente</span>
-                <span class="bot-status">Online</span>
-            </div>
+            <div class="header-info"><span class="bot-name">Astro Inteligente</span><span class="bot-status">Online</span></div>
             <button id="btn-install">📲 Instalar App</button>
         </header>
-
         <main class="chat-messages" id="chat-messages"></main>
-
         <footer class="chat-input-area">
             <div class="input-wrapper">
                 <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
@@ -86,11 +72,8 @@
     </div>
 
     <script>
-        // 🚀 AJUSTE 1: FUNÇÃO DE LOGOUT CORRETA
-        function logoutERenovar() {
-            localStorage.removeItem('astro_usuario_logado');
-            window.location.href = 'index.html';
-        }
+        function logoutERenovar() { localStorage.removeItem('astro_usuario_logado'); window.location.href = 'index.html'; }
+        function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
 
         const dadosBrutos = localStorage.getItem('astro_usuario_logado');
         let usuarioLogado = null;
@@ -99,7 +82,6 @@
 
         const nomeUsuario = usuarioLogado.nome;
         const idUsuario = usuarioLogado.id;
-
         const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         let meuSupabase = null;
@@ -108,10 +90,8 @@
         async function validarVencimento() {
             if (!meuSupabase || !idUsuario) return;
             const { data } = await meuSupabase.from('clientes').select('data_vencimento').eq('id', idUsuario).single();
-            if (data && data.data_vencimento) {
-                if (new Date() > new Date(data.data_vencimento)) {
-                    document.getElementById('lock-screen').style.display = 'flex';
-                }
+            if (data && data.data_vencimento && (new Date() > new Date(data.data_vencimento))) {
+                document.getElementById('lock-screen').style.display = 'flex';
             }
         }
 
@@ -119,7 +99,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             validarVencimento();
-            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos, cobro quem te deve e agora temos a opção **Cofre** para você juntar e render seu dinheiro! 💰🔒 O que manda hoje? 🚀`;
+            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos, cobro quem te deve e agora temos a opção **Cofre**! 💰🔒 O que manda hoje? 🚀`;
             adicionarMensagem(msgBoasVindas, 'bot');
         });
 
@@ -131,7 +111,6 @@
             msg.textContent = texto;
             chatMessages.appendChild(msg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-
             if (id === null) {
                 historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
                 if (historicoConversa.length > 6) historicoConversa.shift();
@@ -142,9 +121,9 @@
         function obterDataFiltro(periodo) {
             if (periodo === 'tudo') return 0;
             const data = new Date();
-            if (periodo === 'hoje') { data.setHours(0, 0, 0, 0); }
-            else if (periodo === 'semana') { const dia = data.getDay(); data.setDate(data.getDate() - dia); data.setHours(0, 0, 0, 0); }
-            else if (periodo === 'mes') { data.setDate(1); data.setHours(0, 0, 0, 0); }
+            if (periodo === 'hoje') data.setHours(0,0,0,0);
+            else if (periodo === 'semana') { data.setDate(data.getDate() - data.getDay()); data.setHours(0,0,0,0); }
+            else if (periodo === 'mes') { data.setDate(1); data.setHours(0,0,0,0); }
             return data.getTime();
         }
 
@@ -163,13 +142,10 @@
                 if (aguardandoLimpeza) {
                     const tipos = { '1': 'saida', '2': 'entrada', '4': 'reserva', '5': 'minhas_dividas', '6': 'divida' };
                     const labels = { '1': 'GASTOS', '2': 'GANHOS', '3': 'tarefas', '4': 'cofre', '5': 'contas a pagar', '6': 'dívidas dos outros' };
-                    if (tipos[textoTratado]) {
-                        await meuSupabase.from('financas').delete().eq('tipo', tipos[textoTratado]).eq('cliente_id', idUsuario);
-                    } else if (textoTratado === '3') {
-                        await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
-                    } else if (textoTratado === '7') {
-                        aguardandoLimpeza = false; adicionarMensagem("Operação cancelada! 👍", 'bot'); return;
-                    } else { return; }
+                    if (tipos[textoTratado]) await meuSupabase.from('financas').delete().eq('tipo', tipos[textoTratado]).eq('cliente_id', idUsuario);
+                    else if (textoTratado === '3') await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
+                    else if (textoTratado === '7') { aguardandoLimpeza = false; adicionarMensagem("Operação cancelada! 👍", 'bot'); return; }
+                    else return;
                     aguardandoLimpeza = false;
                     setTimeout(() => adicionarMensagem(`🗑️ Histórico de ${labels[textoTratado]} apagado!`, 'bot'), 400);
                     return;
@@ -177,7 +153,7 @@
 
                 if (textoTratado === 'limpar' || textoTratado === 'apagar') {
                     aguardandoLimpeza = true;
-                    adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que deseja zerar?\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot');
+                    adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot');
                     return;
                 }
 
@@ -193,29 +169,27 @@
                 document.getElementById(idCarregando).remove();
                 const analise = await resAPI.json();
 
-                if (analise.categoria === 'financa') {
+                // 🚀 TRAVA DE COMANDO PRIORITÁRIO (CORREÇÃO DA DULCE)
+                const comandoSalvar = textoTratado.includes('registre') || textoTratado.includes('anote') || textoTratado.includes('salve') || textoTratado.includes('anotar');
+
+                if (analise.categoria === 'financa' || (comandoSalvar && (textoTratado.includes('reais') || textoTratado.includes('me deve')))) {
                     if (analise.valor === null || analise.valor === undefined) {
-                        adicionarMensagem("Putz, entendi que é sobre dinheiro, mas faltou me dizer o valor certinho. Pode mandar de novo?", 'bot');
+                        adicionarMensagem("Putz, entendi que é financeiro, mas faltou o valor. Manda de novo com o número?", 'bot');
                         return;
                     }
-                    
-                    // Se a IA resumir demais (ex: só "Gorda"), usamos o seu texto completo
-                    let descricaoFinal = analise.descricao_limpa || texto;
-                    if (descricaoFinal.trim().split(/\s+/).length < 2) {
-                        descricaoFinal = texto; 
-                    }
+                    // SALVA O TEXTO BRUTO (CORREÇÃO VT LIXEIRO)
+                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo || 'saida', valor: analise.valor }]);
+                    adicionarMensagem(analise.mensagem || "Feito! Já registrei aqui. 💰", 'bot');
 
-                    await meuSupabase.from('financas').insert([{ 
-                        cliente_id: idUsuario, 
-                        descricao: descricaoFinal, 
-                        tipo: analise.tipo, 
-                        valor: analise.valor 
-                    }]);
-                } else if (analise.categoria === 'tarefa') {
-                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: analise.tipo || 'pendente' }]);
+                } else if (analise.categoria === 'tarefa' || comandoSalvar) {
+                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: 'pendente' }]);
+                    adicionarMensagem("Entendido! Já anotei essa tarefa para você. ✅", 'bot');
+
                 } else if (analise.categoria === 'exclusao') {
                     const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos') ? 'financas' : 'tarefas';
                     await meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
+                    adicionarMensagem(analise.mensagem, 'bot');
+
                 } else if (analise.categoria === 'consulta') {
                     let tabela = 'tarefas'; let filtro = 'pendente';
                     if (analise.tipo === 'gastos') { tabela = 'financas'; filtro = 'saida'; }
@@ -229,52 +203,41 @@
                     let iv = data ? data.filter(i => !i.created_at || new Date(i.created_at).getTime() >= ts) : [];
 
                     if (iv.length > 0) {
-                        let res = analise.mensagem + "\n\n";
+                        let res = (analise.mensagem || "Aqui está:") + "\n\n";
                         if (tabela === 'financas') { let t = 0; iv.forEach(i => { t += i.valor; res += `R$ ${i.valor.toFixed(2)} - ${i.descricao}\n`; }); res += `💰 Total: R$ ${t.toFixed(2)}`; }
-                        else { res += iv.map(it => `• ${it.descricao}`).join('\n'); }
-                        adicionarMensagem(res, 'bot'); return;
-                    } else { adicionarMensagem("Nada encontrado nesse período. 😎", 'bot'); return; }
+                        else res += iv.map(it => `• ${it.descricao}`).join('\n');
+                        adicionarMensagem(res, 'bot');
+                    } else adicionarMensagem("Nada encontrado nesse período. 😎", 'bot');
+                } else {
+                    adicionarMensagem(analise.mensagem, 'bot');
                 }
-                adicionarMensagem(analise.mensagem, 'bot');
             } catch (e) { adicionarMensagem("⚠️ Erro no processamento.", "bot"); }
         }
 
-        // 🚀 AJUSTE 2: MICROFONE COM ONDAS ANIMADAS
         const btnMic = document.querySelector('.btn-mic');
-        const inputMsg = document.getElementById('message-input');
-        const vis = document.getElementById('voice-visualizer');
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
         if (SR) {
             const rec = new SR(); rec.lang = 'pt-BR';
             btnMic.addEventListener('click', () => {
-                rec.start(); btnMic.textContent = '🔴'; inputMsg.style.display = 'none'; vis.style.display = 'flex';
-                vis.classList.add('is-recording');
+                rec.start(); btnMic.textContent = '🔴'; document.getElementById('message-input').style.display = 'none'; 
+                document.getElementById('voice-visualizer').style.display = 'flex'; document.getElementById('voice-visualizer').classList.add('is-recording');
             });
-            rec.onresult = (e) => { inputMsg.value = e.results[0][0].transcript; reset(); enviarMensagem(); };
-            rec.onend = () => reset();
-            function reset() { btnMic.textContent = '🎙️'; inputMsg.style.display = 'block'; vis.style.display = 'none'; vis.classList.remove('is-recording'); }
+            rec.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; resetMic(); enviarMensagem(); };
+            rec.onend = () => resetMic();
+            function resetMic() { btnMic.textContent = '🎙️'; document.getElementById('message-input').style.display = 'block'; document.getElementById('voice-visualizer').style.display = 'none'; document.getElementById('voice-visualizer').classList.remove('is-recording'); }
         }
 
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-
         let promptI;
-        const btnI = document.getElementById('btn-install');
         window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); promptI = e; btnI.style.display = 'block';
-            setTimeout(() => adicionarMensagem("💡 Instale o App clicando lá no topo!", "bot"), 4000);
+            e.preventDefault(); promptI = e; document.getElementById('btn-install').style.display = 'block';
         });
-        btnI.addEventListener('click', async () => { if (promptI) { promptI.prompt(); btnI.style.display = 'none'; promptI = null; } });
+        document.getElementById('btn-install').addEventListener('click', () => { if (promptI) { promptI.prompt(); promptI = null; } });
 
-        // 🚀 AJUSTE 3: DICA PARA IPHONE
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-        if (isIOS && !isStandalone) {
-            setTimeout(() => {
-                adicionarMensagem("💡 Dica para iPhone: Toque no ícone de compartilhar (seta) e depois em 'Adicionar à Tela de Início' para instalar o Astro! 📲", "bot");
-            }, 6000);
+        if (isIOS && !window.matchMedia('(display-mode: standalone)').matches) {
+            setTimeout(() => adicionarMensagem("💡 Dica para iPhone: Toque no ícone de compartilhar e depois em 'Adicionar à Tela de Início'! 📲", "bot"), 6000);
         }
     </script>
 </body>
 </html>
-
