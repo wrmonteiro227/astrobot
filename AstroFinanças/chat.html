@@ -34,7 +34,7 @@
         .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; width: 40px; height: 40px; border-radius: 50%; margin-left: 5px; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
         .btn-send:hover { color: white; background: linear-gradient(135deg, #2563EB, #7C3AED); }
 
-        /* --- WAVEFORM TUNADA CORRIGIDA --- */
+        /* --- WAVEFORM TUNADA --- */
         #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 4px; height: 40px; }
         .bar { width: 3px; background-color: #EF4444; border-radius: 2px; height: 4px; }
         .is-recording .bar { animation: sound 0.5s infinite alternate; }
@@ -116,22 +116,23 @@
             return msg;
         }
 
+        // Função de filtro com o novo padrão "tudo"
         function obterDataFiltro(periodo) {
-        if (periodo === 'tudo') return 0;
+            if (periodo === 'tudo') return 0; 
 
-    const data = new Date();
-    if (periodo === 'hoje') { 
-        data.setHours(0, 0, 0, 0); 
-    } else if (periodo === 'semana') { 
-        const dia = data.getDay(); 
-        data.setDate(data.getDate() - dia); 
-        data.setHours(0, 0, 0, 0); 
-    } else if (periodo === 'mes') { 
-        data.setDate(1); 
-        data.setHours(0, 0, 0, 0); 
-    }
-    return data.getTime();
-}
+            const data = new Date();
+            if (periodo === 'hoje') { 
+                data.setHours(0, 0, 0, 0); 
+            } else if (periodo === 'semana') { 
+                const dia = data.getDay(); 
+                data.setDate(data.getDate() - dia); 
+                data.setHours(0, 0, 0, 0); 
+            } else if (periodo === 'mes') { 
+                data.setDate(1); 
+                data.setHours(0, 0, 0, 0); 
+            }
+            return data.getTime();
+        }
 
         let aguardandoLimpeza = false;
 
@@ -241,18 +242,18 @@
                         } else if (analise.tipo === 'reserva') {
                             tabela = 'financas';
                             filtroStatus = 'reserva';
+                        // 👇 AQUI ESTÁ A INJEÇÃO PERFEITA DAS MINHAS DÍVIDAS 👇
+                        } else if (analise.tipo === 'minhas_dividas') {
+                            tabela = 'financas';
+                            filtroStatus = 'minhas_dividas';
                         }
-                        } else if (analise.tipo === 'minhas_dividas') { 
-                        tabela = 'financas';
-                        filtroStatus = 'minhas_dividas';
-                    }
 
                         const colunaBusca = tabela === 'financas' ? 'tipo' : 'status';
                         const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(colunaBusca, filtroStatus);
 
                         if (error) { adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'); return; }
 
-                        const timestampFiltro = obterDataFiltro(analise.periodo || 'hoje');
+                        const timestampFiltro = obterDataFiltro(analise.periodo || 'tudo'); 
                         let itensValidos = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
 
                         if (itensValidos.length > 0) {
@@ -278,7 +279,6 @@
             }
         }
 
-        // --- LÓGICA DO MICROFONE CORRIGIDA COM WAVEFORM ---
         const btnMic = document.querySelector('.btn-mic');
         const inputMensagem = document.getElementById('message-input');
         const visualizador = document.getElementById('voice-visualizer');
@@ -333,4 +333,3 @@
     </script>
 </body>
 </html>
-
