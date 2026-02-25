@@ -15,6 +15,13 @@
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
         
+        /* Estilo da Tela de Bloqueio (Vencimento) */
+        #lock-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0B0F19; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
+        .lock-icon { font-size: 60px; margin-bottom: 20px; }
+        .lock-title { font-size: 24px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #FF4B2B, #FF416C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .lock-text { color: #9CA3AF; margin-bottom: 30px; line-height: 1.5; }
+        .btn-renew { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 15px 30px; border-radius: 15px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); }
+
         .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
         .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
         .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -23,10 +30,8 @@
         .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
         .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
         
-        /* 👇 Estilo do Botão de Instalar App 👇 */
         #btn-install { display: none; margin-left: auto; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: transform 0.2s; }
         #btn-install:active { transform: scale(0.95); }
-        /* 👆 ------------------------------- 👆 */
 
         .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
         .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
@@ -59,6 +64,12 @@
 <body>
 
     <div class="app-container">
+        <div id="lock-screen">
+            <div class="lock-icon">🔒</div>
+            <h2 class="lock-title">Assinatura Vencida</h2>
+            <p class="lock-text">Para continuar usando a Inteligência do Astro e não perder seus registros, renove seu acesso mensal agora.</p>
+            <a href="index.html" class="btn-renew">Renovar Acesso - R$ 14,99</a>
+        </div>
         <header class="chat-header">
             <div class="header-avatar">
                 <img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot">
@@ -102,9 +113,32 @@
         let meuSupabase = null;
         try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
 
+        // ==========================================
+        // 🔒 CADEADO DE VENCIMENTO DO SAAS 🔒
+        // ==========================================
+        async function validarVencimento() {
+            if (!meuSupabase || !idUsuario) return;
+
+            const { data, error } = await meuSupabase
+                .from('clientes')
+                .select('data_vencimento')
+                .eq('id', idUsuario)
+                .single();
+
+            if (data && data.data_vencimento) {
+                const agora = new Date();
+                const vencimento = new Date(data.data_vencimento);
+
+                if (agora > vencimento) {
+                    document.getElementById('lock-screen').style.display = 'flex';
+                }
+            }
+        }
+
         let historicoConversa = [];
 
         document.addEventListener('DOMContentLoaded', () => {
+            validarVencimento(); // Roda o cadeado assim que abrir
             const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos, cobro quem te deve e agora temos a opção **Cofre** para você juntar e render seu dinheiro! 💰🔒 O que manda hoje? 🚀`;
             adicionarMensagem(msgBoasVindas, 'bot');
         });
@@ -151,14 +185,13 @@
                 let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // MÁQUINA DE ESTADO DO MENU DE LIMPEZA V7
                     if (aguardandoLimpeza) {
-                        if (textoTratado === '1' || textoTratado.includes('gasto') || textoTratado.includes('saida') || textoTratado.includes('saídas')) {
+                        if (textoTratado === '1' || textoTratado.includes('gasto') || textoTratado.includes('saida')) {
                             await meuSupabase.from('financas').delete().eq('tipo', 'saida').eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Seu histórico de GASTOS foi apagado com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '2' || textoTratado.includes('ganho') || textoTratado.includes('entrada') || textoTratado.includes('recebido')) {
+                        } else if (textoTratado === '2' || textoTratado.includes('ganho') || textoTratado.includes('entrada')) {
                             await meuSupabase.from('financas').delete().eq('tipo', 'entrada').eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Seu histórico de GANHOS foi apagado com sucesso!`, 'bot'), 400);
@@ -168,34 +201,31 @@
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Histórico de tarefas apagado com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '4' || textoTratado.includes('cofre') || textoTratado.includes('reserva')) {
+                        } else if (textoTratado === '4' || textoTratado.includes('cofre')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'reserva');
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Seu cofre foi zerado com sucesso!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '5' || textoTratado.includes('quem eu devo') || textoTratado.includes('minhas contas')) {
+                        } else if (textoTratado === '5' || textoTratado.includes('eu devo')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'minhas_dividas');
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`🗑️ Suas contas a pagar (Quem eu devo) foram apagadas com sucesso!`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`🗑️ Suas contas a pagar apagadas!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '6' || textoTratado.includes('quem me deve') || textoTratado.includes('caderninho')) {
+                        } else if (textoTratado === '6' || textoTratado.includes('me deve')) {
                             await meuSupabase.from('financas').delete().eq('cliente_id', idUsuario).eq('tipo', 'divida');
                             aguardandoLimpeza = false;
-                            setTimeout(() => adicionarMensagem(`🗑️ As dívidas dos outros (Quem me deve) foram apagadas com sucesso!`, 'bot'), 400);
+                            setTimeout(() => adicionarMensagem(`🗑️ Dívidas dos outros apagadas!`, 'bot'), 400);
                             return;
-                        } else if (textoTratado === '7' || textoTratado.includes('cancelar') || textoTratado.includes('não')) {
+                        } else if (textoTratado === '7' || textoTratado.includes('cancelar')) {
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`Operação cancelada! 👍`, 'bot'), 400);
-                            return;
-                        } else {
-                            setTimeout(() => adicionarMensagem(`⚠️ Opção inválida. Digite um número de 1 a 7.`, 'bot'), 400);
                             return;
                         }
                     }
 
-                    if (textoTratado === 'limpar' || textoTratado === 'apagar' || textoTratado === 'limpar tudo') {
+                    if (textoTratado === 'limpar' || textoTratado === 'apagar') {
                         aguardandoLimpeza = true;
-                        setTimeout(() => adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que você deseja zerar?\n\n1️⃣ Gastos (Saídas)\n2️⃣ Ganhos (Entradas)\n3️⃣ Tarefas\n4️⃣ Cofre (Reserva)\n5️⃣ Quem eu devo (Minhas Contas)\n6️⃣ Quem me deve (Caderninho)\n7️⃣ Cancelar\n\n*(Para apagar um item específico, cancele isso e digite "apagar [nome]")*`, 'bot'), 400);
+                        setTimeout(() => adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que deseja zerar?\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot'), 400);
                         return;
                     }
 
@@ -209,154 +239,73 @@
                     });
 
                     document.getElementById(idCarregando).remove();
-
-                    if (!resAPI.ok) {
-                        let msgErro = "Tente novamente daqui a pouco.";
-                        try { const erroDetalhado = await resAPI.json(); msgErro = erroDetalhado.error || msgErro; } catch (e) { }
-                        adicionarMensagem(`⚠️ Falha na conexão: ${msgErro}`, 'bot');
-                        return;
-                    }
+                    if (!resAPI.ok) throw new Error();
 
                     const analise = await resAPI.json();
 
                     if (analise.categoria === 'financa') {
-                        if (analise.valor === null || analise.valor === undefined) {
-                            adicionarMensagem("Putz, entendi que é sobre dinheiro, mas faltou me dizer o valor certinho. Pode mandar de novo com o número?", 'bot');
-                            return;
-                        }
                         const { error } = await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, tipo: analise.tipo, valor: analise.valor }]);
-                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
-                        else adicionarMensagem(analise.mensagem, 'bot');
-
+                        adicionarMensagem(error ? "Erro no banco." : analise.mensagem, 'bot');
                     } else if (analise.categoria === 'tarefa') {
                         const { error } = await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: analise.tipo || 'pendente' }]);
-                        if (error) adicionarMensagem(`⚠️ Erro no banco: ${error.message}`, 'bot');
-                        else adicionarMensagem(analise.mensagem, 'bot');
-
+                        adicionarMensagem(error ? "Erro no banco." : analise.mensagem, 'bot');
                     } else if (analise.categoria === 'exclusao') {
-                        if (!analise.termo_busca) { adicionarMensagem(analise.mensagem, 'bot'); return; }
-                        
-                        const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos' || analise.tipo === 'minhas_dividas') ? 'financas' : 'tarefas';
-                        
-                        const { error } = await meuSupabase.from(tabela).delete()
-                            .eq('cliente_id', idUsuario)
-                            .ilike('descricao', `%${analise.termo_busca}%`);
-
-                        if (error) adicionarMensagem(`⚠️ Erro ao apagar no banco: ${error.message}`, 'bot');
-                        else adicionarMensagem(analise.mensagem, 'bot');
-
+                        const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos') ? 'financas' : 'tarefas';
+                        await meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
+                        adicionarMensagem(analise.mensagem, 'bot');
                     } else if (analise.categoria === 'consulta') {
-                        let tabela = 'tarefas';
-                        let filtroStatus = 'pendente';
-
+                        let tabela = 'tarefas'; let filtroStatus = 'pendente';
                         if (analise.tipo === 'gastos') { tabela = 'financas'; filtroStatus = 'saida'; } 
                         else if (analise.tipo === 'dividas') { tabela = 'financas'; filtroStatus = 'divida'; } 
-                        else if (analise.tipo === 'entrada' || analise.tipo === 'ganhos') { tabela = 'financas'; filtroStatus = 'entrada'; } 
+                        else if (analise.tipo === 'entrada') { tabela = 'financas'; filtroStatus = 'entrada'; } 
                         else if (analise.tipo === 'reserva') { tabela = 'financas'; filtroStatus = 'reserva'; } 
                         else if (analise.tipo === 'minhas_dividas') { tabela = 'financas'; filtroStatus = 'minhas_dividas'; }
 
                         const colunaBusca = tabela === 'financas' ? 'tipo' : 'status';
-                        const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(colunaBusca, filtroStatus);
+                        const { data } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(colunaBusca, filtroStatus);
+                        const ts = obterDataFiltro(analise.periodo || 'tudo');
+                        let iv = data ? data.filter(i => !i.created_at || new Date(i.created_at).getTime() >= ts) : [];
 
-                        if (error) { adicionarMensagem(`⚠️ Erro: ${error.message}`, 'bot'); return; }
-
-                        const timestampFiltro = obterDataFiltro(analise.periodo || 'tudo'); 
-                        let itensValidos = data ? data.filter(item => !item.created_at || new Date(item.created_at).getTime() >= timestampFiltro) : [];
-
-                        if (itensValidos.length > 0) {
+                        if (iv.length > 0) {
                             if (tabela === 'financas') {
-                                let total = 0; let extrato = '';
-                                itensValidos.forEach(item => { total += item.valor; extrato += `R$ ${item.valor.toFixed(2)} - ${item.descricao}\n`; });
-                                adicionarMensagem(`${analise.mensagem}\n\n${extrato}\n💰 Total: R$ ${total.toFixed(2)}`, 'bot');
+                                let t = 0; let e = ''; iv.forEach(i => { t += i.valor; e += `R$ ${i.valor.toFixed(2)} - ${i.descricao}\n`; });
+                                adicionarMensagem(`${analise.mensagem}\n\n${e}\n💰 Total: R$ ${t.toFixed(2)}`, 'bot');
                             } else {
-                                let lista = itensValidos.map(t => `• ${t.descricao}`).join('\n');
-                                adicionarMensagem(`${analise.mensagem}\n\n${lista}`, 'bot');
+                                adicionarMensagem(`${analise.mensagem}\n\n${iv.map(it => `• ${it.descricao}`).join('\n')}`, 'bot');
                             }
-                        } else {
-                            adicionarMensagem(`Não encontrei nada registrado nesse período, ${nomeUsuario}! Pode ficar tranquilo. 😎`, 'bot');
-                        }
-                    } else {
-                        adicionarMensagem(analise.mensagem, 'bot');
-                    }
-
-                } catch (err) {
-                    console.error(err);
-                    adicionarMensagem("⚠️ Ocorreu um erro no processamento.", "bot");
-                }
+                        } else { adicionarMensagem(`Nada encontrado nesse período. 😎`, 'bot'); }
+                    } else { adicionarMensagem(analise.mensagem, 'bot'); }
+                } catch (e) { adicionarMensagem("⚠️ Erro no processamento.", "bot"); }
             }
         }
 
         const btnMic = document.querySelector('.btn-mic');
-        const inputMensagem = document.getElementById('message-input');
-        const visualizador = document.getElementById('voice-visualizer');
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const inputMsg = document.getElementById('message-input');
+        const vis = document.getElementById('voice-visualizer');
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition(); 
-            recognition.continuous = false; 
-            recognition.lang = 'pt-BR';
-            let estaOuvindo = false, bloqueioClique = false;
-
-            function resetarVisual() {
-                btnMic.textContent = '🎙️'; btnMic.style.color = '#9CA3AF';
-                visualizador.style.display = 'none'; visualizador.classList.remove('is-recording'); 
-                inputMensagem.style.display = 'block'; inputMensagem.placeholder = 'Converse comigo...'; 
-                estaOuvindo = false; bloqueioClique = false;
-            }
-
-            recognition.onstart = function () {
-                estaOuvindo = true; bloqueioClique = false;
-                btnMic.textContent = '🔴'; btnMic.style.color = '#EF4444';
-                inputMensagem.style.display = 'none'; visualizador.style.display = 'flex';
-                visualizador.classList.add('is-recording'); 
-            };
-
-            recognition.onresult = function (event) { resetarVisual(); inputMensagem.value = event.results[0][0].transcript; enviarMensagem(); };
-            recognition.onerror = function () { resetarVisual(); };
-            recognition.onend = function () { resetarVisual(); };
-
+        if (SR) {
+            const rec = new SR(); rec.lang = 'pt-BR';
             btnMic.addEventListener('click', () => {
-                if (bloqueioClique) return; bloqueioClique = true;
-                if (estaOuvindo) recognition.stop(); else { try { recognition.start(); } catch (e) { resetarVisual(); } }
+                rec.start(); btnMic.textContent = '🔴'; inputMsg.style.display = 'none'; vis.style.display = 'flex';
             });
+            rec.onresult = (e) => { inputMsg.value = e.results[0][0].transcript; reset(); enviarMensagem(); };
+            rec.onend = () => reset();
+            function reset() { btnMic.textContent = '🎙️'; inputMsg.style.display = 'block'; vis.style.display = 'none'; }
         }
 
-        // ==========================================
-        // 🚀 LÓGICA DE INSTALAÇÃO DO APP (PWA) 🚀
-        // ==========================================
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log("[Astro] Service Worker registrado para o App."))
-                .catch(err => console.error("[Astro] Erro no Service Worker:", err));
+            navigator.serviceWorker.register('sw.js');
         }
 
-        let promptInstalacao;
-        const btnInstall = document.getElementById('btn-install');
-
-        // Quando o navegador detecta que pode instalar
+        let promptI;
+        const btnI = document.getElementById('btn-install');
         window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); 
-            promptInstalacao = e; 
-            btnInstall.style.display = 'block'; // Mostra o botão verde no topo
-            
-            // Surpresa: O Astro manda uma mensagem avisando o cliente!
-            setTimeout(() => {
-                adicionarMensagem("💡 Ei! Notei que você tá usando o navegador. Clica lá em cima em '📲 Instalar App' para colocar o Astro direto na tela inicial do seu celular e acessar mais rápido!", "bot");
-            }, 4000);
+            e.preventDefault(); promptI = e; btnI.style.display = 'block';
+            setTimeout(() => adicionarMensagem("💡 Instale o App clicando lá no topo!", "bot"), 4000);
         });
-
-        // Quando o cliente clica no botão de instalar
-        btnInstall.addEventListener('click', async () => {
-            if (promptInstalacao) {
-                promptInstalacao.prompt(); 
-                const { outcome } = await promptInstalacao.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('Cliente instalou o Astro!');
-                    btnInstall.style.display = 'none'; // Some com o botão
-                    adicionarMensagem("🚀 Aí sim! O Astro agora é um aplicativo no seu celular.", "bot");
-                }
-                promptInstalacao = null;
-            }
+        btnI.addEventListener('click', async () => {
+            if (promptI) { promptI.prompt(); btnI.style.display = 'none'; promptI = null; }
         });
     </script>
 </body>
