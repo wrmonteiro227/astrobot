@@ -44,34 +44,30 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS (RECUPERADO: ENTRADAS/GANHOS)
+        // 4. CONSULTAS (ENTRADAS, DÍVIDAS E TAREFAS)
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
             
-            // Regra para Ganhos/Recebimentos
             if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi)\b/)) {
                 tipo = "entrada";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de entradas e ganhos identificados:" });
             }
-            // Regra para Dívidas Suas
             else if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas|devo|quanto devo|quando devo)\b/)) {
                 tipo = "minhas_dividas";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de obrigações financeiras:" });
             } 
-            // Regra para Dívidas dos Outros
             else if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está)\b/)) {
                 tipo = "dividas";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de valores a receber:" });
             }
-            // Regra para Tarefas
             else if (frase.match(/(tarefa|fazer|agenda|compromisso)/)) {
                 tipo = "tarefas";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Cronograma de tarefas pendentes:" });
             }
         }
 
-        // 5. REGISTROS FINANCEIROS
+        // 5. REGISTROS FINANCEIROS (PAGAR/GASTAR = DÍVIDA)
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
                 return res.status(200).json({ 
@@ -91,7 +87,7 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `Movimentação de R$ ${valor.toLocaleString('pt-BR')} confirmada.` });
         }
 
-        // 6. TAREFAS
+        // 6. TAREFAS (Apenas "fazer" ou compromissos)
         if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando)\b/) || ehComandoRegistro) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
