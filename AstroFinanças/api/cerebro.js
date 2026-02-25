@@ -26,6 +26,7 @@ module.exports = async function(req, res) {
             .replace(/\b(ol[aá]|oi|bom dia|boa tarde|boa noite|r\$|reais|me|de|da|do|para|com|o|a|um|uma|esse|essa|mes|semana)\b/g, ' ')
             .replace(/\s+/g, ' ').trim();
 
+        // Limpeza de verbos (para o banco de dados ficar com texto limpo)
         let descLimpa = textoBase.replace(/\b(gastei|comprei|paguei|recebi|ganhei|guardei|poupei|juntei|juntar|anotar|registra|lembrar|preciso|precisei|precisa|gastar|devendo|devo|estoou|estou|apagar|quitar|quitei)\b/g, '')
                                  .replace(/\d+(?:[.,]\d+)?/g, '')
                                  .replace(/\s+/g, ' ').trim();
@@ -43,16 +44,14 @@ module.exports = async function(req, res) {
         }
 
         // 2. EXCLUSÃO RÁPIDA VIA TEXTO
-        // A. Dívidas dos outros ("Fulano me pagou")
         let matchMePagou = frase.match(/([a-zãõáéíóúç]+)\s+(?:me\s+)?(?:pagou|quitou)/);
         if (matchMePagou && !frase.includes("eu")) {
             let nome = matchMePagou[1].trim();
             return res.status(200).json({ categoria: "exclusao", tipo: "financas", termo_busca: nome, mensagem: `Justo! O ${nome} honrou o compromisso. 🤝` });
         }
 
-        // B. Minhas Dívidas ("Paguei o aluguel" / "Apagar divida de luz")
         let matchEuPaguei = frase.match(/\b(paguei|quitei|apagar)\s+(?:a\s+|o\s+|divida\s+(?:de\s+|do\s+|da\s+)?)?([a-zãõáéíóúç\s]+)/);
-        if (matchEuPaguei && !valor) { // Só apaga se não tiver um valor numérico na frase
+        if (matchEuPaguei && !valor) { 
             let termo = matchEuPaguei[2].trim();
             return res.status(200).json({ categoria: "exclusao", tipo: "minhas_dividas", termo_busca: termo, mensagem: `Boa! Dívida/Conta de "${termo}" baixada com sucesso. Menos um peso! 💸` });
         }
@@ -69,20 +68,23 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Tá anotado! Você tem uma conta a pagar de R$ ${valor} (${descLimpa}). Não vai esquecer! 📝💸` });
         }
 
-        // 5. CONSULTAS (Com Correção de "quando" e de "quem")
+        // 5. CONSULTAS (Agora com a regra de ENTRADAS/RECEBIMENTOS)
         const ehPergunta = frase.includes("?") || frase.match(/\b(quem|quanto|quando|quais|qual|lista|ver|mostrar|tenho|agenda|extrato|o que)\b/);
         if (ehPergunta) {
             resposta.categoria = "consulta";
             
-            // Prioridade 1: Minhas Dívidas (Cobrir as variações de perguntas sobre dívidas próprias)
             if (frase.match(/\b(eu devo|tenho que pagar|minhas dividas|contas a pagar|devo|estou devendo|o que estou devendo|quem estou devendo|para quem estou devendo|quanto estou devendo|quanto eu devo|quando devo|quando estou devendo)\b/)) {
                 resposta.tipo = "minhas_dividas"; resposta.mensagem = "Suas contas a pagar (Suas Dívidas): 💸👇";
             
             } else if (frase.match(/\b(guardado|cofre|poupanca|reserva|juntei|junto|guardei)\b/)) {
                 resposta.tipo = "reserva"; resposta.mensagem = "Abrindo o cofre pra ver sua construção de riqueza: 🏦👇";
             
-            } else if (frase.match(/\b(deve|devendo|divida|devedor|quem me)\b/)) {
+            } else if (frase.match(/\b(deve|devem|devendo|divida|dividas|devedor|quem me|me devem)\b/)) {
                 resposta.tipo = "dividas"; resposta.mensagem = "Lista de quem tá no caderninho (A receber): 📜👇";
+            
+            // 👇 A MÁGICA NOVA AQUI 👇
+            } else if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi)\b/)) {
+                resposta.tipo = "entrada"; resposta.mensagem = "Suas entradas e ganhos: 📈👇";
             
             } else if (frase.match(/\b(tarefa|fazer|agenda|compromisso|lembrete)\b/)) {
                 resposta.tipo = "tarefas"; resposta.mensagem = "Buscando na sua agenda de tarefas: 🎯👇";
