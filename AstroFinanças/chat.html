@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Astro | Chat Inteligente</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -11,6 +14,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
+        
         .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
         .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
         .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -18,23 +22,29 @@
         .bot-name { font-weight: 600; font-size: 18px; letter-spacing: 0.5px; }
         .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
         .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
+        
+        /* 👇 Estilo do Botão de Instalar App 👇 */
+        #btn-install { display: none; margin-left: auto; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: transform 0.2s; }
+        #btn-install:active { transform: scale(0.95); }
+        /* 👆 ------------------------------- 👆 */
+
         .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
         .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .message.bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; color: #E5E7EB; }
         .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
         .message.temp { opacity: 0.6; font-style: italic; }
+        
         .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
         .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); transition: border-color 0.3s; height: 50px; }
         .input-wrapper:focus-within { border-color: #8B5CF6; }
         .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
         .chat-input::placeholder { color: #6B7280; }
-        .action-btn { background: transparent; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.3s, transform 0.2s; }
-        .action-btn:hover { color: #A78BFA; transform: scale(1.1); }
+        .action-btn-chat { background: transparent; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.3s, transform 0.2s; }
+        .action-btn-chat:hover { color: #A78BFA; transform: scale(1.1); }
         .btn-send { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; width: 40px; height: 40px; border-radius: 50%; margin-left: 5px; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
         .btn-send:hover { color: white; background: linear-gradient(135deg, #2563EB, #7C3AED); }
 
-        /* WAVEFORM TUNADA */
         #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 4px; height: 40px; }
         .bar { width: 3px; background-color: #EF4444; border-radius: 2px; height: 4px; }
         .is-recording .bar { animation: sound 0.5s infinite alternate; }
@@ -57,6 +67,7 @@
                 <span class="bot-name">Astro Inteligente</span>
                 <span class="bot-status">Online</span>
             </div>
+            <button id="btn-install">📲 Instalar App</button>
         </header>
 
         <main class="chat-messages" id="chat-messages"></main>
@@ -71,9 +82,9 @@
                     <div class="bar"></div>
                     <div class="bar"></div>
                 </div>
-                <button class="action-btn btn-mic">🎙️</button>
+                <button class="action-btn-chat btn-mic">🎙️</button>
             </div>
-            <button class="action-btn btn-send" onclick="enviarMensagem()">➤</button>
+            <button class="action-btn-chat btn-send" onclick="enviarMensagem()">➤</button>
         </footer>
     </div>
 
@@ -140,16 +151,14 @@
                 let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
 
                 try {
-                    // MÁQUINA DE ESTADO DO MENU DE LIMPEZA V7 (7 OPÇÕES SEPARADAS)
+                    // MÁQUINA DE ESTADO DO MENU DE LIMPEZA V7
                     if (aguardandoLimpeza) {
                         if (textoTratado === '1' || textoTratado.includes('gasto') || textoTratado.includes('saida') || textoTratado.includes('saídas')) {
-                            // Apaga APENAS os GASTOS
                             await meuSupabase.from('financas').delete().eq('tipo', 'saida').eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Seu histórico de GASTOS foi apagado com sucesso!`, 'bot'), 400);
                             return;
                         } else if (textoTratado === '2' || textoTratado.includes('ganho') || textoTratado.includes('entrada') || textoTratado.includes('recebido')) {
-                            // Apaga APENAS os GANHOS/ENTRADAS
                             await meuSupabase.from('financas').delete().eq('tipo', 'entrada').eq('cliente_id', idUsuario);
                             aguardandoLimpeza = false;
                             setTimeout(() => adicionarMensagem(`🗑️ Seu histórico de GANHOS foi apagado com sucesso!`, 'bot'), 400);
@@ -184,7 +193,6 @@
                         }
                     }
 
-                    // GATILHO DO MENU DE LIMPEZA V7
                     if (textoTratado === 'limpar' || textoTratado === 'apagar' || textoTratado === 'limpar tudo') {
                         aguardandoLimpeza = true;
                         setTimeout(() => adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que você deseja zerar?\n\n1️⃣ Gastos (Saídas)\n2️⃣ Ganhos (Entradas)\n3️⃣ Tarefas\n4️⃣ Cofre (Reserva)\n5️⃣ Quem eu devo (Minhas Contas)\n6️⃣ Quem me deve (Caderninho)\n7️⃣ Cancelar\n\n*(Para apagar um item específico, cancele isso e digite "apagar [nome]")*`, 'bot'), 400);
@@ -312,6 +320,44 @@
                 if (estaOuvindo) recognition.stop(); else { try { recognition.start(); } catch (e) { resetarVisual(); } }
             });
         }
+
+        // ==========================================
+        // 🚀 LÓGICA DE INSTALAÇÃO DO APP (PWA) 🚀
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log("[Astro] Service Worker registrado para o App."))
+                .catch(err => console.error("[Astro] Erro no Service Worker:", err));
+        }
+
+        let promptInstalacao;
+        const btnInstall = document.getElementById('btn-install');
+
+        // Quando o navegador detecta que pode instalar
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); 
+            promptInstalacao = e; 
+            btnInstall.style.display = 'block'; // Mostra o botão verde no topo
+            
+            // Surpresa: O Astro manda uma mensagem avisando o cliente!
+            setTimeout(() => {
+                adicionarMensagem("💡 Ei! Notei que você tá usando o navegador. Clica lá em cima em '📲 Instalar App' para colocar o Astro direto na tela inicial do seu celular e acessar mais rápido!", "bot");
+            }, 4000);
+        });
+
+        // Quando o cliente clica no botão de instalar
+        btnInstall.addEventListener('click', async () => {
+            if (promptInstalacao) {
+                promptInstalacao.prompt(); 
+                const { outcome } = await promptInstalacao.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('Cliente instalou o Astro!');
+                    btnInstall.style.display = 'none'; // Some com o botão
+                    adicionarMensagem("🚀 Aí sim! O Astro agora é um aplicativo no seu celular.", "bot");
+                }
+                promptInstalacao = null;
+            }
+        });
     </script>
 </body>
 </html>
