@@ -38,7 +38,7 @@ module.exports = async function(req, res) {
                 categoria: "exclusao", 
                 tipo: tipoExclusao, 
                 termo_busca: termoBusca || "tudo", 
-                mensagem: termoBusca ? `ALVO LOCALIZADO: "${termoBusca}". DELETANDO... 🚀` : `Limpando base de dados de ${tipoExclusao}... 🧹`
+                mensagem: termoBusca ? `Comando de exclusão processado para: "${termoBusca}".` : `Limpando registros de ${tipoExclusao}.`
             });
         }
 
@@ -48,19 +48,19 @@ module.exports = async function(req, res) {
             let tipo = "gastos";
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas|devo|quanto devo|quando devo)\b/)) {
                 tipo = "minhas_dividas";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando sua lista de contas a pagar... 💸" });
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de obrigações financeiras:" });
             } 
             else if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está)\b/)) {
                 tipo = "dividas";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Buscando quem está no seu caderninho... 📜" });
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de valores a receber:" });
             }
             else if (frase.match(/(tarefa|fazer|agenda|compromisso)/)) {
                 tipo = "tarefas";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Consultando sua agenda de tarefas... 🎯" });
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Cronograma de tarefas pendentes:" });
             }
         }
 
-        // 5. REGISTROS FINANCEIROS (CORRIGIDO: PAGAR/GASTAR = DÍVIDA)
+        // 5. REGISTROS FINANCEIROS (PAGAR/GASTAR = DÍVIDA)
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
                 return res.status(200).json({ 
@@ -68,29 +68,30 @@ module.exports = async function(req, res) {
                     tipo: "minhas_dividas", 
                     valor: valor, 
                     descricao_limpa: descLimpa, 
-                    mensagem: `Dívida registrada: R$ ${valor.toLocaleString('pt-BR')} para ${descLimpa}. 📝💸` 
+                    mensagem: `Compromisso de R$ ${valor.toLocaleString('pt-BR')} registrado em sua agenda financeira.` 
                 });
             }
             if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
-                return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Caderninho atualizado! ${descLimpa} te deve R$ ${valor.toLocaleString('pt-BR')}. ✍️` });
+                return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Débito de R$ ${valor.toLocaleString('pt-BR')} vinculado a ${descLimpa}.` });
             }
             let tipo = "saida";
             if (frase.match(/(recebi|ganhei|entrou|vendi)/)) tipo = "entrada";
             else if (frase.match(/(guardei|cofre|reserva|poupanca)/)) tipo = "reserva";
-            return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `R$ ${valor.toLocaleString('pt-BR')} processado em ${tipo}. 💰` });
+            return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `Movimentação de R$ ${valor.toLocaleString('pt-BR')} confirmada.` });
         }
 
         // 6. TAREFAS (Apenas "fazer" ou compromissos)
         if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando)\b/) || ehComandoRegistro) {
-            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Tarefa indexada com sucesso: ${descLimpa} ✅` });
+            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
 
+        // --- MENSAGEM DE ERRO PROFISSIONAL E CARISMÁTICA (MODERNIZADA) ---
         return res.status(200).json({ 
             categoria: "conversa", 
-            mensagem: `Ops! O Astro ainda não aprendeu esse comando. 🚀\n\nPode tentar reformular? Estou aqui para organizar seu mundo.` 
+            mensagem: `Não foi possível processar este comando. O Astro ainda não reconhece essa estrutura.\n\nPor favor, tente utilizar palavras-chave como: registrar, pagar, receber ou apagar para uma melhor indexação.` 
         });
         
     } catch (erro) {
-        return res.status(500).json({ erro: "CRITICAL_CORE_ERROR" });
+        return res.status(500).json({ erro: "INTERNAL_CORE_ERROR" });
     }
 };
