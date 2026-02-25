@@ -20,7 +20,7 @@ module.exports = async function(req, res) {
 
         // 2. LIMPEZA DE DESCRIÇÃO (Preserva nomes como VT Lixeiro)
         let descLimpa = texto
-            .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho q|tenho que fazer)\b/gi, '')
+            .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho que pagar|tenho que gastar|fazer o pagamento)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
             .replace(/\s+/g, ' ').trim();
         descLimpa = descLimpa ? descLimpa.charAt(0).toUpperCase() + descLimpa.slice(1) : "Registro";
@@ -60,10 +60,16 @@ module.exports = async function(req, res) {
             }
         }
 
-        // 5. REGISTROS FINANCEIROS
+        // 5. REGISTROS FINANCEIROS (CORRIGIDO: PAGAR/GASTAR = DÍVIDA)
         if (valor) {
-            if (frase.match(/\b(eu devo|estou devendo|devo)\b/) && !frase.match(/\b(fazer|tenho que)\b/)) {
-                return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Dívida de R$ ${valor.toLocaleString('pt-BR')} registrada para ${descLimpa}. 📝💸` });
+            if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
+                return res.status(200).json({ 
+                    categoria: "financa", 
+                    tipo: "minhas_dividas", 
+                    valor: valor, 
+                    descricao_limpa: descLimpa, 
+                    mensagem: `Dívida registrada: R$ ${valor.toLocaleString('pt-BR')} para ${descLimpa}. 📝💸` 
+                });
             }
             if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
                 return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Caderninho atualizado! ${descLimpa} te deve R$ ${valor.toLocaleString('pt-BR')}. ✍️` });
@@ -74,9 +80,9 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `R$ ${valor.toLocaleString('pt-BR')} processado em ${tipo}. 💰` });
         }
 
-        // 6. TAREFAS (Incluso "Tenho que fazer/pagar" conforme pedido)
-        if (frase.match(/\b(tenho que|tenho q|tenho que fazer|esperando|fazer|ir|lembrar|tarefa)\b/) || ehComandoRegistro) {
-            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Entendido! Isso foi para sua lista de tarefas: ${descLimpa} ✅` });
+        // 6. TAREFAS (Apenas "fazer" ou compromissos)
+        if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando)\b/) || ehComandoRegistro) {
+            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Tarefa indexada com sucesso: ${descLimpa} ✅` });
         }
 
         return res.status(200).json({ 
