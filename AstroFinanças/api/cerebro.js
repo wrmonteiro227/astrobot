@@ -9,7 +9,7 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
-        // 1. TRATAMENTO DE VALORES (Garante que 50.000 seja 50000)
+        // 1. TRATAMENTO DE VALORES (50.000 = 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -27,21 +27,16 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - REFORÇADO PARA COFRE)
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - PRESERVAÇÃO DE ALVO)
         if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
             if (frase.match(/(cofre|reserva|poupanca|juntei|guardei)/)) tipoExclusao = "reserva";
             
-            // Sniper: Limpa palavras do comando para focar no ALVO (Nome ou Valor)
+            // Sniper: Remove apenas os verbos de comando e artigos, mantém o resto para busca
             let termoBusca = frase
-                .replace(/\b(apagar|apaga|deletar|excluir|remover|tarefa|gasto|ganho|ganhos|recebi|recebeu|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as|hoje|ontem|reais|r\$|cofre|reserva|poupanca|juntei|guardei)\b/g, '')
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|reais|r\$)\b/g, '')
                 .trim();
-
-            // Se o termo ficar vazio mas houver valor, o valor vira o alvo
-            if (!termoBusca && valor) {
-                termoBusca = valor.toString();
-            }
 
             return res.status(200).json({ 
                 categoria: "exclusao", 
@@ -55,7 +50,6 @@ module.exports = async function(req, res) {
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
-            
             if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado)\b/)) {
                 tipo = "reserva";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando seu saldo em reserva e cofre:" });
