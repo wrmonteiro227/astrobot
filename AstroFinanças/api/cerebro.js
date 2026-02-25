@@ -9,7 +9,7 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
-        // 1. TRATAMENTO DE VALORES (50.000 = 50000)
+        // 1. TRATAMENTO DE VALORES (Garante que 50.000 seja 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -18,7 +18,7 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
-        // 2. LIMPEZA DE DESCRIÇÃO (Preserva nomes como VT Lixeiro)
+        // 2. LIMPEZA DE DESCRIÇÃO (Preserva VT Lixeiro)
         let descLimpa = texto
             .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho que pagar|tenho que gastar|fazer o pagamento)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
@@ -27,22 +27,23 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - PRESERVAÇÃO DE ALVO)
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - EXTRATOR DE CHAVES)
         if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
             if (frase.match(/(cofre|reserva|poupanca|juntei|guardei)/)) tipoExclusao = "reserva";
             
-            // Sniper: Remove apenas os verbos de comando e artigos, mantém o resto para busca
+            // Sniper: Remove apenas os comandos e artigos. 
+            // Se você disser "apagar cofre guardei 1245", ele manda "guardei 1245"
             let termoBusca = frase
-                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|reais|r\$)\b/g, '')
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|reais|r\$|cofre|reserva|poupanca|minhas|meu|minha)\b/g, '')
                 .trim();
 
             return res.status(200).json({ 
                 categoria: "exclusao", 
                 tipo: tipoExclusao, 
                 termo_busca: termoBusca || "tudo", 
-                mensagem: termoBusca ? `Comando de exclusão processado para: "${termoBusca}".` : `Limpando registros de ${tipoExclusao}.`
+                mensagem: termoBusca ? `Solicitação de exclusão para o termo: "${termoBusca}".` : `Limpando registros de ${tipoExclusao}.`
             });
         }
 
@@ -75,13 +76,7 @@ module.exports = async function(req, res) {
         // 5. REGISTROS FINANCEIROS
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
-                return res.status(200).json({ 
-                    categoria: "financa", 
-                    tipo: "minhas_dividas", 
-                    valor: valor, 
-                    descricao_limpa: descLimpa, 
-                    mensagem: `Compromisso de R$ ${valor.toLocaleString('pt-BR')} registrado em sua agenda financeira.` 
-                });
+                return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Compromisso de R$ ${valor.toLocaleString('pt-BR')} registrado em sua agenda financeira.` });
             }
             if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
                 return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Débito de R$ ${valor.toLocaleString('pt-BR')} vinculado a ${descLimpa}.` });
