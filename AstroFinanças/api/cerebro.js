@@ -27,16 +27,20 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - AGORA COM PRIORIDADE MÁXIMA)
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - AJUSTE DE ALVO POR VALOR)
         if (frase.match(/\b(apagar|deletar|excluir|remover|me pagou|quitou|apaga)\b/)) {
             let tipoExclusao = "financas";
             if (frase.includes("tarefa")) tipoExclusao = "tarefas";
             
-            // Sniper agressivo para limpar o termo de busca
+            // Se não houver nome, mas houver valor, o valor vira o alvo da busca
             let termoBusca = frase
                 .replace(/\b(apagar|apaga|deletar|excluir|remover|tarefa|gasto|ganho|ganhos|recebi|recebeu|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as|hoje|ontem|reais|r\$)\b/g, '')
-                .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '') // Remove o valor do termo de busca
                 .trim();
+
+            // Se o termo ficou vazio mas tem valor, usamos o valor para o banco de dados localizar
+            if (!termoBusca && valor) {
+                termoBusca = valor.toString();
+            }
 
             return res.status(200).json({ 
                 categoria: "exclusao", 
@@ -68,7 +72,7 @@ module.exports = async function(req, res) {
             }
         }
 
-        // 5. REGISTROS FINANCEIROS (SÓ ENTRA SE NÃO FOR EXCLUSÃO)
+        // 5. REGISTROS FINANCEIROS
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
                 return res.status(200).json({ 
