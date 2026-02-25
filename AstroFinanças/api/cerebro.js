@@ -9,7 +9,7 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
-        // 1. TRATAMENTO DE VALORES (50.000 = 50000)
+        // 1. TRATAMENTO DE VALORES (Garante que 50.000 seja 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -18,9 +18,9 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
-        // 2. LIMPEZA DE DESCRIÇÃO (Preserva VT Lixeiro, Alana Gorda, etc)
+        // 2. LIMPEZA DE DESCRIÇÃO (Preserva nomes como VT Lixeiro)
         let descLimpa = texto
-            .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover)\b/gi, '')
+            .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho q|tenho que fazer)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
             .replace(/\s+/g, ' ').trim();
         descLimpa = descLimpa ? descLimpa.charAt(0).toUpperCase() + descLimpa.slice(1) : "Registro";
@@ -42,30 +42,30 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS (SÓ SE NÃO FOR REGISTRO)
-        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
+        // 4. CONSULTAS
+        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
-            // QUEM EU DEVO
-            if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas)\b/)) {
+            if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas|devo|quanto devo|quando devo)\b/)) {
                 tipo = "minhas_dividas";
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando sua lista de contas a pagar... 💸" });
             } 
-            // QUEM ME DEVE (Ajustado para "quem está me devendo")
             else if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está)\b/)) {
                 tipo = "dividas";
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Buscando quem está no seu caderninho... 📜" });
             }
             else if (frase.match(/(tarefa|fazer|agenda|compromisso)/)) {
                 tipo = "tarefas";
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Consultando sua agenda de tarefas... 🎯" });
             }
-            return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando protocolos de consulta... 📊" });
         }
 
         // 5. REGISTROS FINANCEIROS
         if (valor) {
-            if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|devo)\b/)) {
-                return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Dívida registrada: R$ ${valor.toLocaleString('pt-BR')} para ${descLimpa}. 📝` });
+            if (frase.match(/\b(eu devo|estou devendo|devo)\b/) && !frase.match(/\b(fazer|tenho que)\b/)) {
+                return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Dívida de R$ ${valor.toLocaleString('pt-BR')} registrada para ${descLimpa}. 📝💸` });
             }
-            if (frase.match(/(deve|devendo)/) && !frase.includes("eu")) {
+            if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
                 return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Caderninho atualizado! ${descLimpa} te deve R$ ${valor.toLocaleString('pt-BR')}. ✍️` });
             }
             let tipo = "saida";
@@ -74,12 +74,15 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `R$ ${valor.toLocaleString('pt-BR')} processado em ${tipo}. 💰` });
         }
 
-        // 6. TAREFAS (DULCE / COMANDO REGISTRAR)
-        if (frase.match(/\b(esperando|fazer|ir|lembrar|tarefa)\b/) || ehComandoRegistro) {
-            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Tarefa indexada com sucesso: ${descLimpa} ✅` });
+        // 6. TAREFAS (Incluso "Tenho que fazer/pagar" conforme pedido)
+        if (frase.match(/\b(tenho que|tenho q|tenho que fazer|esperando|fazer|ir|lembrar|tarefa)\b/) || ehComandoRegistro) {
+            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Entendido! Isso foi para sua lista de tarefas: ${descLimpa} ✅` });
         }
 
-        return res.status(200).json({ categoria: "conversa", mensagem: "Astro Jarvis online. Aguardando comandos, Wallace. 🚀" });
+        return res.status(200).json({ 
+            categoria: "conversa", 
+            mensagem: `Ops! O Astro ainda não aprendeu esse comando. 🚀\n\nPode tentar reformular? Estou aqui para organizar seu mundo.` 
+        });
         
     } catch (erro) {
         return res.status(500).json({ erro: "CRITICAL_CORE_ERROR" });
