@@ -19,6 +19,12 @@ export default async function handler(req, res) {
 
         if (statusPagamento === 'approved' || statusPagamento === 'PAID') {
             
+            // 👇 CÁLCULO DOS 30 DIAS DE ASSINATURA 👇
+            const dataFutura = new Date(); // Pega a data e hora de agora
+            dataFutura.setDate(dataFutura.getDate() + 30); // Soma exatos 30 dias
+            const vencimentoISO = dataFutura.toISOString(); // Converte pro formato do banco
+            // 👆 ---------------------------------- 👆
+
             // 3. Conecta no Supabase e ativa o cliente
             const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
             const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
@@ -33,7 +39,11 @@ export default async function handler(req, res) {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=minimal'
                 },
-                body: JSON.stringify({ assinatura_ativa: true }) // A MÁGICA ACONTECE AQUI!
+                // A MÁGICA ACONTECE AQUI! Enviamos assinatura ATIVA + DATA DE VENCIMENTO
+                body: JSON.stringify({ 
+                    assinatura_ativa: true,
+                    data_vencimento: vencimentoISO 
+                }) 
             });
 
             if (!respostaSupabase.ok) {
@@ -41,7 +51,7 @@ export default async function handler(req, res) {
             }
 
             // Responde para a DivPag que deu tudo certo!
-            return res.status(200).json({ sucesso: true, mensagem: `Cliente ${telefoneCliente} ativado com sucesso!` });
+            return res.status(200).json({ sucesso: true, mensagem: `Cliente ${telefoneCliente} ativado e vencimento gerado para ${vencimentoISO}!` });
         } else {
             // Se o pagamento foi recusado ou ainda está pendente
             return res.status(200).json({ aviso: 'Pagamento não está aprovado ainda.' });
