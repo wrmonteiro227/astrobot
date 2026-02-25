@@ -20,7 +20,7 @@ export default async function handler(req, res) {
         dadosDivPag.append('client_secret', clientSecret);
         dadosDivPag.append('nome', nome);
         dadosDivPag.append('cpf', cpf);
-        dadosDivPag.append('valor', '29.90'); // PREÇO DA ASSINATURA
+        dadosDivPag.append('valor', '14.99'); // PREÇO DA ASSINATURA
         dadosDivPag.append('descricao', 'Assinatura Mensal Astro');
         
         // Manda o telefone do cliente escondido no link pro Webhook saber quem pagou!
@@ -46,4 +46,5 @@ export default async function handler(req, res) {
         console.error("Erro ao gerar PIX:", erro);
         return res.status(500).json({ erro: 'Erro interno no servidor' });
     }
+
 }
