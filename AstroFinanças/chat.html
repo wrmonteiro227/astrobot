@@ -242,6 +242,10 @@
                             tabela = 'financas';
                             filtroStatus = 'reserva';
                         }
+                        } else if (analise.tipo === 'minhas_dividas') { 
+                        tabela = 'financas';
+                        filtroStatus = 'minhas_dividas';
+                    }
 
                         const colunaBusca = tabela === 'financas' ? 'tipo' : 'status';
                         const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(colunaBusca, filtroStatus);
