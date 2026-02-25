@@ -169,7 +169,6 @@
                 document.getElementById(idCarregando).remove();
                 const analise = await resAPI.json();
 
-                // 🚀 TRAVA DE COMANDO PRIORITÁRIO (CORREÇÃO DA DULCE)
                 const comandoSalvar = textoTratado.includes('registre') || textoTratado.includes('anote') || textoTratado.includes('salve') || textoTratado.includes('anotar');
 
                 if (analise.categoria === 'financa' || (comandoSalvar && (textoTratado.includes('reais') || textoTratado.includes('me deve')))) {
@@ -177,7 +176,6 @@
                         adicionarMensagem("Putz, entendi que é financeiro, mas faltou o valor. Manda de novo com o número?", 'bot');
                         return;
                     }
-                    // SALVA O TEXTO BRUTO (CORREÇÃO VT LIXEIRO)
                     await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo || 'saida', valor: analise.valor }]);
                     adicionarMensagem(analise.mensagem || "Feito! Já registrei aqui. 💰", 'bot');
 
@@ -186,8 +184,15 @@
                     adicionarMensagem("Entendido! Já anotei essa tarefa para você. ✅", 'bot');
 
                 } else if (analise.categoria === 'exclusao') {
-                    const tabela = (analise.tipo === 'financas' || analise.tipo === 'gastos') ? 'financas' : 'tarefas';
-                    await meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
+                    // --- CORREÇÃO TONY STARK: SNIPER COM FILTRO DE TIPO ---
+                    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
+                    let query = meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario);
+                    
+                    if (tabela === 'financas' && analise.tipo !== 'financas') {
+                        query = query.eq('tipo', analise.tipo);
+                    }
+                    
+                    await query.ilike('descricao', `%${analise.termo_busca}%`);
                     adicionarMensagem(analise.mensagem, 'bot');
 
                 } else if (analise.categoria === 'consulta') {
