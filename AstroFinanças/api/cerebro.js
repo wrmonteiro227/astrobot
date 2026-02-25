@@ -26,8 +26,8 @@ module.exports = async function(req, res) {
             .replace(/\b(ol[aá]|oi|bom dia|boa tarde|boa noite|r\$|reais|me|de|da|do|para|com|o|a|um|uma)\b/g, ' ')
             .replace(/\s+/g, ' ').trim();
 
-        // Faxina V4: Limpa os verbos de ação para a descrição ficar profissional no banco de dados
-        let descLimpa = textoBase.replace(/\b(gastei|comprei|paguei|recebi|ganhei|guardei|poupei|juntei|juntar|anotar|registra|lembrar|preciso|precisei|precisa|gastar|devendo|devo)\b/g, '')
+        // Limpeza expandida com o "devo" e erro de digitação "estoou"
+        let descLimpa = textoBase.replace(/\b(gastei|comprei|paguei|recebi|ganhei|guardei|poupei|juntei|juntar|anotar|registra|lembrar|preciso|precisei|precisa|gastar|devendo|devo|estoou|estou)\b/g, '')
                                  .replace(/\d+(?:[.,]\d+)?/g, '')
                                  .replace(/\s+/g, ' ').trim();
 
@@ -43,16 +43,17 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "conversa", mensagem: `E aí, parceiro! O Astro tá na área. O que manda hoje? 🚀` });
         }
 
-        // 2. DÍVIDAS DOS OUTROS (Eles me devem / Contas a Receber)
+        // 2. DÍVIDAS DOS OUTROS (Eles me devem)
         let matchDivida = frase.match(/([a-zãõáéíóúç]+)\s+(?:está\s+)?(?:me\s+)?(?:deve|devendo|pagou|precisa me pagar|tem que me pagar)/);
-        if (matchDivida && !frase.match(/\b(eu devo|estou devendo)\b/)) {
+        // Filtro para impedir que o "devo" ou "estoou devendo" caia aqui
+        if (matchDivida && !frase.match(/\b(eu devo|estou devendo|estoou devendo|devo)\b/)) {
             let nomePessoa = matchDivida[1].trim();
             if (frase.includes("pagou")) return res.status(200).json({ categoria: "exclusao", tipo: "financas", termo_busca: nomePessoa, mensagem: `Justo! O ${nomePessoa} honrou o compromisso. 🤝` });
             if (valor) return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: `Dívida de ${nomePessoa}`, mensagem: `Tá no caderninho! ✍️ ${nomePessoa} te deve R$ ${valor}.` });
         }
 
-        // 3. MINHAS DÍVIDAS / CONTAS A PAGAR (Eu devo) -> A Mágica Nova
-        if (frase.match(/\b(estou devendo|eu devo|tenho que pagar|preciso pagar|fiquei devendo)\b/) && valor) {
+        // 3. MINHAS DÍVIDAS / CONTAS A PAGAR (Eu devo) - Agora capta "devo" sozinho
+        if (frase.match(/\b(estou devendo|estoou devendo|eu devo|devo|tenho que pagar|preciso pagar|fiquei devendo)\b/) && valor) {
             return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Tá anotado! Você tem uma conta a pagar de R$ ${valor} (${descLimpa}). Não vai esquecer! 📝💸` });
         }
 
@@ -60,7 +61,7 @@ module.exports = async function(req, res) {
         const ehPergunta = frase.includes("?") || frase.match(/\b(quem|quanto|quais|qual|lista|ver|mostrar|tenho|agenda|extrato)\b/);
         if (ehPergunta) {
             resposta.categoria = "consulta";
-            if (frase.match(/\b(eu devo|tenho que pagar|minhas dividas|contas a pagar)\b/)) {
+            if (frase.match(/\b(eu devo|tenho que pagar|minhas dividas|contas a pagar|devo)\b/)) {
                 resposta.tipo = "minhas_dividas"; resposta.mensagem = "Suas contas a pagar (Suas Dívidas): 💸👇";
             } else if (frase.match(/\b(guardado|cofre|poupanca|reserva|juntei|junto|guardei)\b/)) {
                 resposta.tipo = "reserva"; resposta.mensagem = "Abrindo o cofre pra ver sua construção de riqueza: 🏦👇";
@@ -74,7 +75,7 @@ module.exports = async function(req, res) {
             return res.status(200).json(resposta);
         }
 
-        // 5. REGISTROS PADRÃO (Cofre, Entradas e Saídas)
+        // 5. REGISTROS PADRÃO
         if (frase.match(/\b(guardei|guardar|poupei|cofre|depositei|juntei|juntar|junto)\b/) && valor) {
             return res.status(200).json({ categoria: "financa", tipo: "reserva", valor: valor, descricao_limpa: descLimpa, mensagem: sortearMsg(msgPoupanca, valor) });
         }
@@ -87,7 +88,7 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo: "saida", valor: valor, descricao_limpa: descLimpa, mensagem: sortearMsg(msgGastos, valor) });
         }
 
-        // 6. TAREFAS (Sem valor)
+        // 6. TAREFAS
         if (frase.match(/\b(tenho que|vou|preciso|lembrar|amanha|domingo|segunda|terca|quarta|quinta|sexta|sabado|dia|fazer|ir|igreja|balneario)\b/)) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", valor: null, descricao_limpa: descLimpa, mensagem: sortearMsg(msgTarefas, "") });
         }
