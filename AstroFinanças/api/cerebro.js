@@ -9,7 +9,7 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
-        // 1. TRATAMENTO DE VALORES
+        // 1. TRATAMENTO DE VALORES (50.000 = 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -18,7 +18,7 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
-        // 2. LIMPEZA DE DESCRIÇÃO
+        // 2. LIMPEZA DE DESCRIÇÃO (Preserva VT Lixeiro, Alana Gorda, etc)
         let descLimpa = texto
             .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
@@ -27,57 +27,61 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // --- 🎯 NOVIDADE: LÓGICA DE EXCLUSÃO CIRÚRGICA (SNIPER) ---
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER)
         if (frase.match(/\b(apagar|deletar|excluir|remover|me pagou|quitou)\b/)) {
-            let tipoExclusao = "financas"; // Padrão
+            let tipoExclusao = "financas";
             if (frase.includes("tarefa")) tipoExclusao = "tarefas";
-            if (frase.includes("gasto") || frase.includes("ganho") || frase.includes("divida")) tipoExclusao = "financas";
-
-            // Pega o que sobrou da frase para usar como busca (ex: "dulce" ou "barbeiro")
             let termoBusca = frase
                 .replace(/\b(apagar|deletar|excluir|remover|tarefa|gasto|conta|me pagou|quitou|o|a|os|as)\b/g, '')
                 .trim();
-
             return res.status(200).json({ 
                 categoria: "exclusao", 
                 tipo: tipoExclusao, 
                 termo_busca: termoBusca || "tudo", 
-                mensagem: termoBusca ? `Comando recebido. Eliminando "${termoBusca}" do sistema... 🚀` : `Limpando todos os registros de ${tipoExclusao}... 🧹`
+                mensagem: termoBusca ? `ALVO LOCALIZADO: "${termoBusca}". DELETANDO... 🚀` : `Limpando base de dados de ${tipoExclusao}... 🧹`
             });
         }
 
-        // 3. CONSULTAS (Corrigido: Quem estou devendo)
-        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|mostrar|lista|tenho|extrato|ver)\b/)) && !ehComandoRegistro;
+        // 4. CONSULTAS (SÓ SE NÃO FOR REGISTRO)
+        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
-            if (frase.match(/(estou devendo|eu devo|devo pagar|minhas dividas)/)) tipo = "minhas_dividas";
-            else if (frase.match(/(quem me deve|me devem|dividas)/)) tipo = "dividas";
-            else if (frase.match(/(tarefa|fazer|agenda)/)) tipo = "tarefas";
-            return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando banco de dados... 📊" });
+            // QUEM EU DEVO
+            if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas)\b/)) {
+                tipo = "minhas_dividas";
+            } 
+            // QUEM ME DEVE (Ajustado para "quem está me devendo")
+            else if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está)\b/)) {
+                tipo = "dividas";
+            }
+            else if (frase.match(/(tarefa|fazer|agenda|compromisso)/)) {
+                tipo = "tarefas";
+            }
+            return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando protocolos de consulta... 📊" });
         }
 
-        // 4. REGISTROS FINANCEIROS
+        // 5. REGISTROS FINANCEIROS
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|devo)\b/)) {
-                return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Anotado. Você deve R$ ${valor.toLocaleString('pt-BR')} (${descLimpa}). 📝💸` });
+                return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Dívida registrada: R$ ${valor.toLocaleString('pt-BR')} para ${descLimpa}. 📝` });
             }
             if (frase.match(/(deve|devendo)/) && !frase.includes("eu")) {
-                return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Tá no caderninho! ${descLimpa} te deve R$ ${valor.toLocaleString('pt-BR')}. ✍️` });
+                return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Caderninho atualizado! ${descLimpa} te deve R$ ${valor.toLocaleString('pt-BR')}. ✍️` });
             }
             let tipo = "saida";
-            if (frase.match(/(recebi|ganhei|entrou)/)) tipo = "entrada";
+            if (frase.match(/(recebi|ganhei|entrou|vendi)/)) tipo = "entrada";
             else if (frase.match(/(guardei|cofre|reserva|poupanca)/)) tipo = "reserva";
-            return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `Registro de R$ ${valor.toLocaleString('pt-BR')} realizado. 💰` });
+            return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `R$ ${valor.toLocaleString('pt-BR')} processado em ${tipo}. 💰` });
         }
 
-        // 5. TAREFAS
+        // 6. TAREFAS (DULCE / COMANDO REGISTRAR)
         if (frase.match(/\b(esperando|fazer|ir|lembrar|tarefa)\b/) || ehComandoRegistro) {
-            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Tarefa indexada: ${descLimpa} ✅` });
+            return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Tarefa indexada com sucesso: ${descLimpa} ✅` });
         }
 
-        return res.status(200).json({ categoria: "conversa", mensagem: "Astro online. No que posso ajudar? 🚀" });
+        return res.status(200).json({ categoria: "conversa", mensagem: "Astro Jarvis online. Aguardando comandos, Wallace. 🚀" });
         
     } catch (erro) {
-        return res.status(500).json({ erro: "Erro no core" });
+        return res.status(500).json({ erro: "CRITICAL_CORE_ERROR" });
     }
 };
