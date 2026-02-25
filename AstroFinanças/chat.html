@@ -50,112 +50,82 @@
         <div id="lock-screen">
             <div class="lock-icon">🔒</div>
             <h2 class="lock-title">Assinatura Vencida</h2>
-            <p class="lock-text">Para continuar usando a Inteligência do Astro e não perder seus registros, renove seu acesso mensal agora.</p>
-            <button onclick="logoutERenovar()" class="btn-renew">Renovar Acesso - R$ 14,99</button>
+            <p class="lock-text">Renove seu acesso para continuar.</p>
+            <button onclick="logoutERenovar()" class="btn-renew">Renovar R$ 14,99</button>
         </div>
         <header class="chat-header">
-            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
-            <div class="header-info"><span class="bot-name">Astro Inteligente</span><span class="bot-status">Online</span></div>
-            <button id="btn-install">📲 Instalar App</button>
+            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png"></div>
+            <div class="header-info"><span class="bot-name">Astro</span><span class="bot-status">Online</span></div>
         </header>
         <main class="chat-messages" id="chat-messages"></main>
         <footer class="chat-input-area">
             <div class="input-wrapper">
                 <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
-                <div id="voice-visualizer">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-                <button class="action-btn-chat btn-mic">🎙️</button>
             </div>
-            <button class="action-btn-chat" style="color: #3B82F6; background:none; border:none; font-size:20px; cursor:pointer;" onclick="enviarMensagem()">➤</button>
+            <button onclick="enviarMensagem()" style="background:none; border:none; color:#3B82F6; font-size:20px;">➤</button>
         </footer>
     </div>
 
     <script>
         function logoutERenovar() { localStorage.removeItem('astro_usuario_logado'); window.location.href = 'index.html'; }
         function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
-
-        const dadosBrutos = localStorage.getItem('astro_usuario_logado');
-        let usuarioLogado = null;
-        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
-        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
-
-        const nomeUsuario = usuarioLogado.nome;
-        const idUsuario = usuarioLogado.id;
+        const dBrutos = localStorage.getItem('astro_usuario_logado');
+        let uLogado = null;
+        try { uLogado = dBrutos ? JSON.parse(dBrutos) : null; } catch (e) { uLogado = null; }
+        if (!uLogado || !uLogado.nome) { window.location.href = 'login.html'; }
+        const nomeUsuario = uLogado.nome; const idUsuario = uLogado.id;
         const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
         const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
         let meuSupabase = null;
-        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
+        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error(e); }
 
-        async function validarVencimento() {
-            if (!meuSupabase || !idUsuario) return;
-            const { data } = await meuSupabase.from('clientes').select('data_vencimento').eq('id', idUsuario).single();
-            if (data && data.data_vencimento && (new Date() > new Date(data.data_vencimento))) {
-                document.getElementById('lock-screen').style.display = 'flex';
-            }
-        }
-
-        let historicoConversa = [];
-
-        function adicionarMensagem(texto, remetente, id = null) {
+        function adicionarMensagem(texto, remetente) {
             const chatMessages = document.getElementById('chat-messages');
             const msg = document.createElement('div');
             msg.className = `message ${remetente}`;
-            if (id) msg.id = id;
             msg.textContent = texto;
             chatMessages.appendChild(msg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-            if (id === null) {
-                historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
-                if (historicoConversa.length > 6) historicoConversa.shift();
-            }
             return msg;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            validarVencimento();
-            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos, cobro quem te deve e agora temos a opção **Cofre**! 💰🔒 O que manda hoje? 🚀`;
-            adicionarMensagem(msgBoasVindas, 'bot');
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (meuSupabase) {
+                const { data } = await meuSupabase.from('clientes').select('data_vencimento').eq('id', idUsuario).single();
+                if (data && new Date() > new Date(data.data_vencimento)) document.getElementById('lock-screen').style.display = 'flex';
+            }
+            adicionarMensagem(`E aí, ${nomeUsuario}! O que manda hoje? 🚀`, 'bot');
         });
 
-        function obterDataFiltro(periodo) {
-            const d = new Date();
-            d.setHours(0,0,0,0);
-            if (periodo === 'hoje') return d.toISOString();
-            if (periodo === 'ontem') { d.setDate(d.getDate() - 1); return d.toISOString(); }
-            if (periodo === 'semana') { d.setDate(d.getDate() - d.getDay()); return d.toISOString(); }
-            if (periodo === 'mes') { d.setDate(1); return d.toISOString(); }
-            return "2000-01-01T00:00:00Z";
-        }
-
         async function enviarMensagem() {
-            const messageInput = document.getElementById('message-input');
-            const texto = messageInput.value.trim();
+            const input = document.getElementById('message-input');
+            const texto = input.value.trim();
             if (!texto || !meuSupabase) return;
             adicionarMensagem(texto, 'user');
-            messageInput.value = '';
+            input.value = '';
 
             try {
-                const resAPI = await fetch('/api/cerebro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto, nomeUsuario }) });
-                const analise = await resAPI.json();
+                const res = await fetch('/api/cerebro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto, nomeUsuario }) });
+                const analise = await res.json();
 
                 if (analise.categoria === 'financa') {
                     await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
                     adicionarMensagem(analise.mensagem, 'bot');
-
+                    
                     const { data: metas } = await meuSupabase.from('metas').select('*').eq('cliente_id', idUsuario);
                     if (metas) {
                         for (const m of metas) {
                             if (texto.toLowerCase().includes(m.descricao.toLowerCase().substring(0,3))) {
                                 const { data: g } = await meuSupabase.from('financas').select('valor').eq('cliente_id', idUsuario).eq('tipo', m.tipo).ilike('descricao', `%${m.descricao.substring(0,3)}%`);
                                 const total = g.reduce((acc, curr) => acc + curr.valor, 0);
-                                if (total > m.valor) adicionarMensagem(`⚠️ META ESTOURADA: ${m.descricao} (Total R$ ${total})`, 'bot');
+                                if (total > m.valor) adicionarMensagem(`⚠️ TONY! Meta de ${m.descricao} estourada! Total: R$ ${total}`, 'bot');
                             }
                         }
                     }
                 } else if (analise.categoria === 'update') {
                     const tab = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
-                    await meuSupabase.from(tab).update({ [tab === 'tarefas' ? 'status' : 'pago']: tab === 'tarefas' ? 'concluido' : true }).eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca.substring(0,5)}%`);
+                    // SENSOR SNIPER: Usa apenas o começo da palavra para garantir o match no Supabase
+                    const { data, error } = await meuSupabase.from(tab).update({ [tab === 'tarefas' ? 'status' : 'pago']: tab === 'tarefas' ? 'concluido' : true }).eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
                     adicionarMensagem(analise.mensagem, 'bot');
                 } else if (analise.categoria === 'consulta') {
                     let tab = 'tarefas'; let col = 'status'; let fil = 'pendente';
@@ -164,13 +134,17 @@
                     else if (analise.tipo === 'reserva') { tab = 'financas'; col = 'tipo'; fil = 'reserva'; }
                     else if (analise.tipo === 'dividas') { tab = 'financas'; col = 'tipo'; fil = 'divida'; }
                     else if (analise.tipo === 'minhas_dividas') { tab = 'financas'; col = 'tipo'; fil = 'minhas_dividas'; }
-                    const dCorte = obterDataFiltro(analise.periodo);
-                    const { data } = await meuSupabase.from(tab).select('*').eq('cliente_id', idUsuario).eq(col, fil).gte('created_at', dCorte);
+
+                    const ag = new Date(); ag.setHours(0,0,0,0);
+                    let corte = new Date(2000,0,1).toISOString();
+                    if (analise.periodo === 'hoje') corte = ag.toISOString();
+                    else if (analise.periodo === 'ontem') { ag.setDate(ag.getDate() - 1); corte = ag.toISOString(); }
+
+                    const { data } = await meuSupabase.from(tab).select('*').eq('cliente_id', idUsuario).eq(col, fil).gte('created_at', corte);
                     if (data && data.length > 0) {
                         let r = analise.mensagem + "\n\n";
                         if (tab === 'financas') {
-                            let t = 0;
-                            data.forEach(i => { t += i.valor; r += `R$ ${i.valor.toFixed(2)} - ${i.descricao}\n`; });
+                            let t = 0; data.forEach(i => { t += i.valor; r += `R$ ${i.valor.toFixed(2)} - ${i.descricao}\n`; });
                             r += `💰 Total: R$ ${t.toFixed(2)}`;
                         } else r += data.map(i => `• ${i.descricao}`).join('\n');
                         adicionarMensagem(r, 'bot');
@@ -178,26 +152,14 @@
                 } else if (analise.categoria === 'exclusao') {
                     await meuSupabase.from(analise.tipo === 'tarefas' ? 'tarefas' : 'financas').delete().eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
                     adicionarMensagem(analise.mensagem, 'bot');
+                } else if (analise.categoria === 'tarefa') {
+                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: texto, status: 'pendente' }]);
+                    adicionarMensagem(analise.mensagem, 'bot');
                 } else if (analise.categoria === 'meta') {
                     await meuSupabase.from('metas').insert([{ cliente_id: idUsuario, descricao: analise.descricao, valor: analise.valor, tipo: analise.tipo }]);
                     adicionarMensagem(analise.mensagem, 'bot');
-                } else {
-                    adicionarMensagem(analise.mensagem, 'bot');
-                }
-            } catch (e) { console.error(e); adicionarMensagem("Erro de processamento.", "bot"); }
-        }
-
-        const btnMic = document.querySelector('.btn-mic');
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SR) {
-            const rec = new SR(); rec.lang = 'pt-BR';
-            btnMic.addEventListener('click', () => {
-                rec.start(); btnMic.textContent = '🔴'; document.getElementById('message-input').style.display = 'none'; 
-                document.getElementById('voice-visualizer').style.display = 'flex'; document.getElementById('voice-visualizer').classList.add('is-recording');
-            });
-            rec.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; resetMic(); enviarMensagem(); };
-            rec.onend = () => resetMic();
-            function resetMic() { btnMic.textContent = '🎙️'; document.getElementById('message-input').style.display = 'block'; document.getElementById('voice-visualizer').style.display = 'none'; document.getElementById('voice-visualizer').classList.remove('is-recording'); }
+                } else { adicionarMensagem(analise.mensagem, 'bot'); }
+            } catch (e) { console.error(e); adicionarMensagem("Erro.", "bot"); }
         }
     </script>
 </body>
