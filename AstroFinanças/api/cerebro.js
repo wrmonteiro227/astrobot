@@ -32,12 +32,10 @@ module.exports = async function(req, res) {
             let tipoExclusao = "financas";
             if (frase.includes("tarefa")) tipoExclusao = "tarefas";
             
-            // Se não houver nome, mas houver valor, o valor vira o alvo da busca
             let termoBusca = frase
                 .replace(/\b(apagar|apaga|deletar|excluir|remover|tarefa|gasto|ganho|ganhos|recebi|recebeu|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as|hoje|ontem|reais|r\$)\b/g, '')
                 .trim();
 
-            // Se o termo ficou vazio mas tem valor, usamos o valor para o banco de dados localizar
             if (!termoBusca && valor) {
                 termoBusca = valor.toString();
             }
@@ -50,11 +48,17 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS
+        // 4. CONSULTAS (RECUPERADO: RESERVA/COFRE)
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
-            if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi)\b/)) {
+            
+            // Regra para Reserva/Cofre (RESTABELECIDA)
+            if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado)\b/)) {
+                tipo = "reserva";
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando seu saldo em reserva e cofre:" });
+            }
+            else if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi)\b/)) {
                 tipo = "entrada";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de entradas e ganhos identificados:" });
             }
