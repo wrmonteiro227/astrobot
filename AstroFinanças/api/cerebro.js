@@ -18,7 +18,7 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
-        // 2. LIMPEZA DE DESCRIÇÃO (Preserva VT Lixeiro, Alana Gorda, etc)
+        // 2. LIMPEZA DE DESCRIÇÃO (Preserva nomes como VT Lixeiro)
         let descLimpa = texto
             .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho que pagar|tenho que gastar|fazer o pagamento)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
@@ -27,15 +27,18 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - AJUSTE DE ALVO POR VALOR)
-        if (frase.match(/\b(apagar|deletar|excluir|remover|me pagou|quitou|apaga)\b/)) {
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - REFORÇADO PARA COFRE)
+        if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
-            if (frase.includes("tarefa")) tipoExclusao = "tarefas";
+            if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
+            if (frase.match(/(cofre|reserva|poupanca|juntei|guardei)/)) tipoExclusao = "reserva";
             
+            // Sniper: Limpa palavras do comando para focar no ALVO (Nome ou Valor)
             let termoBusca = frase
-                .replace(/\b(apagar|apaga|deletar|excluir|remover|tarefa|gasto|ganho|ganhos|recebi|recebeu|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as|hoje|ontem|reais|r\$)\b/g, '')
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|tarefa|gasto|ganho|ganhos|recebi|recebeu|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as|hoje|ontem|reais|r\$|cofre|reserva|poupanca|juntei|guardei)\b/g, '')
                 .trim();
 
+            // Se o termo ficar vazio mas houver valor, o valor vira o alvo
             if (!termoBusca && valor) {
                 termoBusca = valor.toString();
             }
@@ -48,12 +51,11 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS (RECUPERADO: RESERVA/COFRE)
+        // 4. CONSULTAS
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
             
-            // Regra para Reserva/Cofre (RESTABELECIDA)
             if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado)\b/)) {
                 tipo = "reserva";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando seu saldo em reserva e cofre:" });
