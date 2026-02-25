@@ -194,7 +194,23 @@
                 const analise = await resAPI.json();
 
                 if (analise.categoria === 'financa') {
-                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, tipo: analise.tipo, valor: analise.valor }]);
+                    if (analise.valor === null || analise.valor === undefined) {
+                        adicionarMensagem("Putz, entendi que é sobre dinheiro, mas faltou me dizer o valor certinho. Pode mandar de novo?", 'bot');
+                        return;
+                    }
+                    
+                    // Se a IA resumir demais (ex: só "Gorda"), usamos o seu texto completo
+                    let descricaoFinal = analise.descricao_limpa || texto;
+                    if (descricaoFinal.trim().split(/\s+/).length < 2) {
+                        descricaoFinal = texto; 
+                    }
+
+                    await meuSupabase.from('financas').insert([{ 
+                        cliente_id: idUsuario, 
+                        descricao: descricaoFinal, 
+                        tipo: analise.tipo, 
+                        valor: analise.valor 
+                    }]);
                 } else if (analise.categoria === 'tarefa') {
                     await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: analise.tipo || 'pendente' }]);
                 } else if (analise.categoria === 'exclusao') {
@@ -261,3 +277,4 @@
     </script>
 </body>
 </html>
+
