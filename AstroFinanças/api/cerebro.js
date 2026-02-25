@@ -25,13 +25,12 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (SNIPER)
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER)
         if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
             if (frase.match(/(cofre|reserva|poupanca|juntei|guardei|economizei|econimizei)/)) tipoExclusao = "reserva";
             
-            // Remove apenas o comando de apagar para enviar a descrição fiel ao banco
             let termoBusca = frase
                 .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|minhas|meu|minha|cofre)\b/g, '')
                 .trim();
@@ -44,10 +43,10 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS (ADICIONADO "ECONIMIZEI" PARA EVITAR ERRO DE SAÍDA)
-        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais|como|onde|saldo|resumo|total|balanco)\b/)) && !ehComandoRegistro;
+        // 4. CONSULTAS (REFINADO PARA EVITAR FALSOS POSITIVOS)
+        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|extrato|ver|quais|como|onde|saldo|resumo|total|balanco)\b/)) && !ehComandoRegistro;
+        
         if (ehPergunta) {
-            // Match reforçado para Cofre
             if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado|economizei|econimizei|guardado|acumulado)\b/)) {
                 return res.status(200).json({ categoria: "consulta", tipo: "reserva", mensagem: "Relatório de ativos e reservas financeiras (Cofre):" });
             }
@@ -60,10 +59,16 @@ module.exports = async function(req, res) {
             if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está|calote|pendentes comigo|dinheiro na rua)\b/)) {
                 return res.status(200).json({ categoria: "consulta", tipo: "dividas", mensagem: "Relatório de créditos e valores a receber:" });
             }
-            if (frase.match(/\b(tarefa|fazer|agenda|compromisso|pendente|lembrete|hoje|amanha|semana|lista de tarefas)\b/)) {
+            if (frase.match(/\b(tarefa|fazer|agenda|compromisso|pendente|lembrete|hoje|amanha|semana|lista de tarefas|tenho que ir|onde ir|para onde)\b/)) {
                 return res.status(200).json({ categoria: "consulta", tipo: "tarefas", mensagem: "Cronograma de atividades e lembretes:" });
             }
-            return res.status(200).json({ categoria: "consulta", tipo: "gastos", mensagem: "Relatório geral de movimentações de saída:" });
+            
+            // SE TIVER "TENHO" MAS NÃO TIVER OUTRA KEYWORD FINANCEIRA, NÃO ABRE GASTOS POR PADRÃO
+            if (!frase.match(/\b(gastos|gastei|saidas|compras|contas)\b/) && frase.includes("tenho")) {
+                // Deixa passar para o bloco de tarefas ou erro
+            } else {
+                return res.status(200).json({ categoria: "consulta", tipo: "gastos", mensagem: "Relatório geral de movimentações de saída:" });
+            }
         }
 
         // 5. REGISTROS FINANCEIROS
@@ -74,7 +79,6 @@ module.exports = async function(req, res) {
             if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
                 return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Débito de R$ ${valor.toLocaleString('pt-BR')} vinculado a ${descLimpa}.` });
             }
-            // Registro no cofre
             if (frase.match(/(guardei|cofre|reserva|poupanca|juntei|economizei|econimizei)/)) {
                 return res.status(200).json({ categoria: "financa", tipo: "reserva", valor, descricao_limpa: descLimpa, mensagem: `Valor de R$ ${valor.toLocaleString('pt-BR')} adicionado ao seu Cofre.` });
             }
@@ -84,7 +88,8 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo: "saida", valor, descricao_limpa: descLimpa, mensagem: `Movimentação de R$ ${valor.toLocaleString('pt-BR')} confirmada.` });
         }
 
-        if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando)\b/) || ehComandoRegistro) {
+        // 6. TAREFAS (AMPLIADO PARA CAPTURAR "IR" E "ONDE")
+        if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando|tenho que ir|onde ir|para onde)\b/) || ehComandoRegistro) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
 
