@@ -9,7 +9,6 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
-        // 1. TRATAMENTO DE VALORES (50.000 = 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -18,7 +17,6 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
-        // 2. LIMPEZA DE DESCRIÇÃO (Preserva VT Lixeiro, Alana, etc)
         let descLimpa = texto
             .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho que pagar|tenho que gastar|fazer o pagamento)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
@@ -27,14 +25,15 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - FOCO EM VALOR)
+        // 3. EXCLUSÃO CIRÚRGICA (SNIPER - AJUSTE PARA TENTAR MATCH NO BANCO)
         if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
             if (frase.match(/(cofre|reserva|poupanca|juntei|guardei)/)) tipoExclusao = "reserva";
             
-            let termoBusca = valor ? valor.toString() : frase
-                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|reais|r\$|minhas|meu|minha|cofre|reserva|poupanca|poupado|juntei|guardei)\b/g, '')
+            // Tentativa de mandar o máximo de informação possível para o banco
+            let termoBusca = frase
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|minhas|meu|minha)\b/g, '')
                 .trim();
 
             return res.status(200).json({ 
@@ -45,9 +44,8 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS (INTELIGÊNCIA EXPANDIDA)
+        // 4. CONSULTAS
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais|como|onde|saldo|resumo|total|balanco)\b/)) && !ehComandoRegistro;
-        
         if (ehPergunta) {
             if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado|economizei|guardado|acumulado|no banco)\b/)) {
                 return res.status(200).json({ categoria: "consulta", tipo: "reserva", mensagem: "Relatório de ativos e reservas financeiras (Cofre):" });
@@ -67,32 +65,23 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "consulta", tipo: "gastos", mensagem: "Relatório geral de movimentações de saída:" });
         }
 
-        // 5. REGISTROS FINANCEIROS (COFRE VS ENTRADAS)
+        // 5. REGISTROS FINANCEIROS
         if (valor) {
-            // A. QUEM EU DEVO
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
                 return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Compromisso de R$ ${valor.toLocaleString('pt-BR')} registrado.` });
             }
-            // B. QUEM ME DEVE
             if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
                 return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Débito de R$ ${valor.toLocaleString('pt-BR')} vinculado a ${descLimpa}.` });
             }
-            
-            // C. COFRE (RESERVA) - PRIORIDADE PARA JUNTEI/GUARDEI
             if (frase.match(/(guardei|cofre|reserva|poupanca|juntei|economizei)/)) {
                 return res.status(200).json({ categoria: "financa", tipo: "reserva", valor, descricao_limpa: descLimpa, mensagem: `Valor de R$ ${valor.toLocaleString('pt-BR')} adicionado ao seu Cofre.` });
             }
-
-            // D. ENTRADAS (FINANÇAS)
             if (frase.match(/(recebi|ganhei|entrou|vendi|faturamento)/)) {
                 return res.status(200).json({ categoria: "financa", tipo: "entrada", valor, descricao_limpa: descLimpa, mensagem: `Entrada de R$ ${valor.toLocaleString('pt-BR')} registrada nos seus ganhos.` });
             }
-
-            // E. SAÍDAS (PADRÃO)
             return res.status(200).json({ categoria: "financa", tipo: "saida", valor, descricao_limpa: descLimpa, mensagem: `Movimentação de R$ ${valor.toLocaleString('pt-BR')} confirmada.` });
         }
 
-        // 6. TAREFAS
         if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando)\b/) || ehComandoRegistro) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
