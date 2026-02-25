@@ -27,13 +27,15 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - CORRIGIDO)
-        if (frase.match(/\b(apagar|deletar|excluir|remover|me pagou|quitou)\b/)) {
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - AGORA COM PRIORIDADE MÁXIMA)
+        if (frase.match(/\b(apagar|deletar|excluir|remover|me pagou|quitou|apaga)\b/)) {
             let tipoExclusao = "financas";
             if (frase.includes("tarefa")) tipoExclusao = "tarefas";
             
+            // Sniper agressivo para limpar o termo de busca
             let termoBusca = frase
-                .replace(/\b(apagar|deletar|excluir|remover|tarefa|gasto|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as)\b/g, '')
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|tarefa|gasto|ganho|ganhos|recebi|recebeu|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as|hoje|ontem|reais|r\$)\b/g, '')
+                .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '') // Remove o valor do termo de busca
                 .trim();
 
             return res.status(200).json({ 
@@ -44,11 +46,10 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS (ENTRADAS, DÍVIDAS E TAREFAS)
+        // 4. CONSULTAS
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
-            
             if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi)\b/)) {
                 tipo = "entrada";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de entradas e ganhos identificados:" });
@@ -67,7 +68,7 @@ module.exports = async function(req, res) {
             }
         }
 
-        // 5. REGISTROS FINANCEIROS (PAGAR/GASTAR = DÍVIDA)
+        // 5. REGISTROS FINANCEIROS (SÓ ENTRA SE NÃO FOR EXCLUSÃO)
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
                 return res.status(200).json({ 
@@ -87,12 +88,11 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: `Movimentação de R$ ${valor.toLocaleString('pt-BR')} confirmada.` });
         }
 
-        // 6. TAREFAS (Apenas "fazer" ou compromissos)
+        // 6. TAREFAS
         if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando)\b/) || ehComandoRegistro) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
 
-        // --- MENSAGEM DE ERRO PROFISSIONAL ---
         return res.status(200).json({ 
             categoria: "conversa", 
             mensagem: `Não foi possível processar este comando. O Astro ainda não reconhece essa estrutura.\n\nPor favor, tente utilizar palavras-chave como: registrar, pagar, receber ou apagar para uma melhor indexação.` 
