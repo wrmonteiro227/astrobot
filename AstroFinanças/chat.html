@@ -15,13 +15,14 @@
         body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
         
-        /* Tela de Bloqueio (Vencimento) */
+        /* 🔒 TELA DE BLOQUEIO */
         #lock-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0B0F19; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
         .lock-icon { font-size: 60px; margin-bottom: 20px; }
         .lock-title { font-size: 24px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #FF4B2B, #FF416C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .lock-text { color: #9CA3AF; margin-bottom: 30px; line-height: 1.5; }
-        .btn-renew { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 18px 30px; border-radius: 15px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); transition: transform 0.2s; border: none; cursor: pointer; }
+        .btn-renew { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 18px 30px; border-radius: 15px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); border: none; cursor: pointer; }
 
+        /* HEADER */
         .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
         .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
         .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -29,9 +30,9 @@
         .bot-name { font-weight: 600; font-size: 18px; letter-spacing: 0.5px; }
         .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
         .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
-        
         #btn-install { display: none; margin-left: auto; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; }
 
+        /* MENSAGENS */
         .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
         .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; word-wrap: break-word; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -39,6 +40,7 @@
         .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
         .message.temp { opacity: 0.6; font-style: italic; }
         
+        /* INPUT E VISUALIZADOR */
         .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
         .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); height: 50px; }
         .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
@@ -47,6 +49,7 @@
         #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 4px; height: 40px; }
         .bar { width: 3px; background-color: #EF4444; border-radius: 2px; height: 4px; }
         .is-recording .bar { animation: sound 0.5s infinite alternate; }
+        /* 🚀 RECUPERADO: TIMING INDIVIDUAL DAS BARRAS */
         .bar:nth-child(1) { animation-duration: 0.4s; }
         .bar:nth-child(2) { animation-duration: 0.6s; }
         .bar:nth-child(3) { animation-duration: 0.5s; }
@@ -56,21 +59,17 @@
     </style>
 </head>
 <body>
-
     <div class="app-container">
         <div id="lock-screen">
             <div class="lock-icon">🔒</div>
             <h2 class="lock-title">Assinatura Vencida</h2>
-            <p class="lock-text">Seu período expirou. Renove agora para continuar usando o Astro.</p>
+            <p class="lock-text">Para continuar usando a Inteligência do Astro e não perder seus registros, renove seu acesso mensal agora.</p>
             <button onclick="logoutERenovar()" class="btn-renew">Renovar Acesso - R$ 14,99</button>
         </div>
 
         <header class="chat-header">
             <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
-            <div class="header-info">
-                <span class="bot-name">Astro Inteligente</span>
-                <span class="bot-status">Online</span>
-            </div>
+            <div class="header-info"><span class="bot-name">Astro Inteligente</span><span class="bot-status">Online</span></div>
             <button id="btn-install">📲 Instalar App</button>
         </header>
 
@@ -89,7 +88,7 @@
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO E LOGIN ---
+        // --- 1. CONFIGURAÇÕES E LOGIN ---
         function logoutERenovar() {
             localStorage.removeItem('astro_usuario_logado');
             window.location.href = 'index.html';
@@ -107,7 +106,7 @@
         let meuSupabase = null;
         try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { }
 
-        // --- CADEADO ---
+        // --- 2. CADEADO DE ACESSO ---
         async function validarVencimento() {
             if (!meuSupabase || !idUsuario) return;
             const { data } = await meuSupabase.from('clientes').select('data_vencimento').eq('id', idUsuario).single();
@@ -120,9 +119,12 @@
 
         let historicoConversa = [];
 
+        // --- 3. INICIALIZAÇÃO E BOAS-VINDAS ---
         document.addEventListener('DOMContentLoaded', () => {
             validarVencimento();
-            adicionarMensagem(`E aí, ${nomeUsuario}! O que vamos organizar hoje? 🚀`, 'bot');
+            // 🚀 RECUPERADO: MENSAGEM DE BOAS-VINDAS COMPLETA
+            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos, cobro quem te deve e agora temos a opção **Cofre** para você juntar e render seu dinheiro! 💰🔒 O que manda hoje? 🚀`;
+            adicionarMensagem(msgBoasVindas, 'bot');
         });
 
         function adicionarMensagem(texto, remetente, id = null) {
@@ -142,6 +144,7 @@
 
         function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
 
+        // --- 4. MOTOR DO CHAT E LIMPEZA ---
         let aguardandoLimpeza = false;
 
         async function enviarMensagem() {
@@ -174,7 +177,7 @@
 
                 if (textoTratado === 'limpar' || textoTratado === 'apagar') {
                     aguardandoLimpeza = true;
-                    adicionarMensagem(`⚠️ MODO DE LIMPEZA\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot');
+                    adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\nO que você deseja zerar?\n\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot');
                     return;
                 }
 
@@ -190,7 +193,12 @@
                 document.getElementById(idCarregando).remove();
                 const analise = await resAPI.json();
 
+                // 🚀 RECUPERADO: VALIDAÇÃO DE VALOR NULO
                 if (analise.categoria === 'financa') {
+                    if (analise.valor === null || analise.valor === undefined) {
+                        adicionarMensagem("Putz, entendi que é sobre dinheiro, mas faltou me dizer o valor certinho. Pode mandar de novo com o número?", 'bot');
+                        return;
+                    }
                     await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, tipo: analise.tipo, valor: analise.valor }]);
                 } else if (analise.categoria === 'tarefa') {
                     await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: analise.tipo || 'pendente' }]);
@@ -211,50 +219,39 @@
                         if (tabela === 'financas') { let t = 0; data.forEach(i => { t += i.valor; res += `R$ ${i.valor.toFixed(2)} - ${i.descricao}\n`; }); res += `💰 Total: R$ ${t.toFixed(2)}`; }
                         else { res += data.map(it => `• ${it.descricao}`).join('\n'); }
                         adicionarMensagem(res, 'bot'); return;
-                    } else { adicionarMensagem("Nada encontrado. 😎", 'bot'); return; }
+                    } else { adicionarMensagem("Não encontrei nada registrado nesse período. 😎", 'bot'); return; }
                 }
                 adicionarMensagem(analise.mensagem, 'bot');
             } catch (e) { adicionarMensagem("⚠️ Erro no processamento.", "bot"); }
         }
 
-        // --- MICROFONE E ONDAS ---
+        // --- 5. LÓGICA DO MICROFONE E ONDAS ---
         const btnMic = document.querySelector('.btn-mic');
-        const inputMensagem = document.getElementById('message-input');
         const visualizador = document.getElementById('voice-visualizer');
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
         if (SR) {
             const rec = new SR(); rec.lang = 'pt-BR';
             let ouvindo = false;
-
-            btnMic.addEventListener('click', () => { 
-                if (ouvindo) rec.stop(); else rec.start(); 
-            });
-
+            btnMic.addEventListener('click', () => { if (ouvindo) rec.stop(); else rec.start(); });
             rec.onstart = () => {
                 ouvindo = true; btnMic.textContent = '🔴';
-                inputMensagem.style.display = 'none'; visualizador.style.display = 'flex';
+                document.getElementById('message-input').style.display = 'none'; visualizador.style.display = 'flex';
                 visualizador.classList.add('is-recording');
             };
-
             rec.onresult = (e) => {
-                inputMensagem.value = e.results[0][0].transcript;
+                document.getElementById('message-input').value = e.results[0][0].transcript;
                 resetVisual(); enviarMensagem();
             };
-
             rec.onend = () => resetVisual();
-            rec.onerror = () => resetVisual();
-
             function resetVisual() {
                 ouvindo = false; btnMic.textContent = '🎙️';
-                inputMensagem.style.display = 'block'; visualizador.style.display = 'none';
+                document.getElementById('message-input').style.display = 'block'; visualizador.style.display = 'none';
                 visualizador.classList.remove('is-recording');
             }
         }
 
-        // --- PWA E IPHONE ---
+        // --- 6. PWA E IPHONE ---
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-
         let promptI;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault(); promptI = e; document.getElementById('btn-install').style.display = 'block';
