@@ -9,7 +9,7 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
-        // 1. TRATAMENTO DE VALORES (Garante que 50.000 seja 50000)
+        // 1. TRATAMENTO DE VALORES (Consolidado: 50.000 = 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -18,7 +18,7 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
-        // 2. LIMPEZA DE DESCRIÇÃO (Preserva VT Lixeiro)
+        // 2. LIMPEZA DE DESCRIÇÃO (Consolidado: Preserva VT Lixeiro)
         let descLimpa = texto
             .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho que pagar|tenho que gastar|fazer o pagamento)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
@@ -27,16 +27,15 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - EXTRATOR DE CHAVES)
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - AJUSTADO PARA EXCLUSÃO DE COFRE/GANHOS)
         if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
             if (frase.match(/(cofre|reserva|poupanca|juntei|guardei)/)) tipoExclusao = "reserva";
             
-            // Sniper: Remove apenas os comandos e artigos. 
-            // Se você disser "apagar cofre guardei 1245", ele manda "guardei 1245"
+            // Sniper Inteligente: Remove apenas verbos e artigos, mantém o resto para o banco encontrar o alvo
             let termoBusca = frase
-                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|reais|r\$|cofre|reserva|poupanca|minhas|meu|minha)\b/g, '')
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|reais|r\$|minhas|meu|minha)\b/g, '')
                 .trim();
 
             return res.status(200).json({ 
@@ -47,36 +46,44 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS
-        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
+        // 4. CONSULTAS (INTELIGÊNCIA EXPANDIDA INTEGRADA)
+        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais|como|onde|saldo|resumo|total|balanco)\b/)) && !ehComandoRegistro;
+        
         if (ehPergunta) {
-            let tipo = "gastos";
-            if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado)\b/)) {
-                tipo = "reserva";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Acessando seu saldo em reserva e cofre:" });
+            // A. RESERVA / COFRE / ECONOMIAS
+            if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado|economizei|guardado|poupado|acumulado|no banco)\b/)) {
+                return res.status(200).json({ categoria: "consulta", tipo: "reserva", mensagem: "Relatório de ativos e reservas financeiras:" });
             }
-            else if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi)\b/)) {
-                tipo = "entrada";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de entradas e ganhos identificados:" });
+            // B. GANHOS / ENTRADAS / RECEBIMENTOS
+            if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi|recebimentos|faturamento|salario|pix recebido)\b/)) {
+                return res.status(200).json({ categoria: "consulta", tipo: "entrada", mensagem: "Análise de fluxo de caixa (Entradas):" });
             }
-            else if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas|devo|quanto devo|quando devo)\b/)) {
-                tipo = "minhas_dividas";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de obrigações financeiras:" });
+            // C. DÍVIDAS DO USUÁRIO (CONTAS A PAGAR)
+            if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas|devo|quanto devo|quando devo|contas|boletos|vencimento|pagamentos pendentes)\b/)) {
+                return res.status(200).json({ categoria: "consulta", tipo: "minhas_dividas", mensagem: "Relatório de obrigações e contas a pagar:" });
             } 
-            else if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está)\b/)) {
-                tipo = "dividas";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de valores a receber:" });
+            // D. DÍVIDAS DE TERCEIROS (QUEM DEVE AO USUÁRIO)
+            if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está|calote|pendentes comigo|dinheiro na rua)\b/)) {
+                return res.status(200).json({ categoria: "consulta", tipo: "dividas", mensagem: "Relatório de créditos e valores a receber:" });
             }
-            else if (frase.match(/(tarefa|fazer|agenda|compromisso)/)) {
-                tipo = "tarefas";
-                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Cronograma de tarefas pendentes:" });
+            // E. TAREFAS / AGENDA
+            if (frase.match(/\b(tarefa|fazer|agenda|compromisso|pendente|lembrete|hoje|amanha|semana|lista de tarefas)\b/)) {
+                return res.status(200).json({ categoria: "consulta", tipo: "tarefas", mensagem: "Cronograma de atividades e lembretes:" });
             }
+            // F. GASTOS GERAIS (PADRÃO)
+            return res.status(200).json({ categoria: "consulta", tipo: "gastos", mensagem: "Relatório geral de movimentações de saída:" });
         }
 
-        // 5. REGISTROS FINANCEIROS
+        // 5. REGISTROS FINANCEIROS (Consolidado: Dívida vs Tarefa)
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
-                return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Compromisso de R$ ${valor.toLocaleString('pt-BR')} registrado em sua agenda financeira.` });
+                return res.status(200).json({ 
+                    categoria: "financa", 
+                    tipo: "minhas_dividas", 
+                    valor: valor, 
+                    descricao_limpa: descLimpa, 
+                    mensagem: `Compromisso de R$ ${valor.toLocaleString('pt-BR')} registrado em sua agenda financeira.` 
+                });
             }
             if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
                 return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Débito de R$ ${valor.toLocaleString('pt-BR')} vinculado a ${descLimpa}.` });
@@ -92,6 +99,7 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
 
+        // MENSAGEM DE ERRO PROFISSIONAL (Consolidado)
         return res.status(200).json({ 
             categoria: "conversa", 
             mensagem: `Não foi possível processar este comando. O Astro ainda não reconhece essa estrutura.\n\nPor favor, tente utilizar palavras-chave como: registrar, pagar, receber ou apagar para uma melhor indexação.` 
