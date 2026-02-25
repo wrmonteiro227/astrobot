@@ -25,15 +25,15 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (SNIPER - AJUSTE PARA TENTAR MATCH NO BANCO)
+        // 3. EXCLUSÃO CIRÚRGICA (SNIPER)
         if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
-            if (frase.match(/(cofre|reserva|poupanca|juntei|guardei)/)) tipoExclusao = "reserva";
+            if (frase.match(/(cofre|reserva|poupanca|juntei|guardei|economizei|econimizei)/)) tipoExclusao = "reserva";
             
-            // Tentativa de mandar o máximo de informação possível para o banco
+            // Remove apenas o comando de apagar para enviar a descrição fiel ao banco
             let termoBusca = frase
-                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|minhas|meu|minha)\b/g, '')
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|minhas|meu|minha|cofre)\b/g, '')
                 .trim();
 
             return res.status(200).json({ 
@@ -44,10 +44,11 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS
+        // 4. CONSULTAS (ADICIONADO "ECONIMIZEI" PARA EVITAR ERRO DE SAÍDA)
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais|como|onde|saldo|resumo|total|balanco)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
-            if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado|economizei|guardado|acumulado|no banco)\b/)) {
+            // Match reforçado para Cofre
+            if (frase.match(/\b(juntei|guardei|reserva|cofre|poupanca|poupado|economizei|econimizei|guardado|acumulado)\b/)) {
                 return res.status(200).json({ categoria: "consulta", tipo: "reserva", mensagem: "Relatório de ativos e reservas financeiras (Cofre):" });
             }
             if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi|recebimentos|faturamento|salario|pix recebido)\b/)) {
@@ -73,7 +74,8 @@ module.exports = async function(req, res) {
             if (frase.match(/(me deve|devendo)/) && !frase.includes("eu")) {
                 return res.status(200).json({ categoria: "financa", tipo: "divida", valor: valor, descricao_limpa: descLimpa, mensagem: `Débito de R$ ${valor.toLocaleString('pt-BR')} vinculado a ${descLimpa}.` });
             }
-            if (frase.match(/(guardei|cofre|reserva|poupanca|juntei|economizei)/)) {
+            // Registro no cofre
+            if (frase.match(/(guardei|cofre|reserva|poupanca|juntei|economizei|econimizei)/)) {
                 return res.status(200).json({ categoria: "financa", tipo: "reserva", valor, descricao_limpa: descLimpa, mensagem: `Valor de R$ ${valor.toLocaleString('pt-BR')} adicionado ao seu Cofre.` });
             }
             if (frase.match(/(recebi|ganhei|entrou|vendi|faturamento)/)) {
