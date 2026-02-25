@@ -12,91 +12,74 @@ module.exports = async function(req, res) {
 
         if (!frase) return res.status(200).json({ categoria: "conversa", mensagem: "Fala, chefe! Tô na escuta." });
 
-        // --- 🎯 REGRA DE OURO PARA VALORES (50.000 agora é 50000) ---
+        // --- 🎯 TRATAMENTO DE VALORES (Milhar e Decimal) ---
         function extrairValor(str) {
-            const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/); // Pega 50.000,00 ou 50000
+            const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
-            let num = match[0].replace(/\./g, ''); // Remove ponto de milhar
-            num = num.replace(',', '.'); // Troca vírgula por ponto decimal
+            let num = match[0].replace(/\./g, '').replace(',', '.');
             return parseFloat(num);
         }
         const valor = extrairValor(frase);
 
-        // --- 🎯 REGRA DE OURO PARA DESCRIÇÃO (VT Lixeiro / Alana Gorda) ---
-        // Agora ele remove apenas palavras de comando, mantendo os nomes próprios
-        function limparDescricao(str) {
-            return str
-                .replace(/\b(registre|anote|salve|anotar|registra|lembrar|preciso|paguei|recebi|gastei|deve|devendo|tem que|me deve|eu devo|estou devendo|reais|r\$)\b/gi, '')
-                .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '') // Remove o valor da descrição
-                .replace(/\s+/g, ' ').trim();
-        }
-        let descLimpa = limparDescricao(texto); // Usa o texto original (com maiúsculas) para preservar nomes
+        // --- 🎯 LIMPEZA CIRÚRGICA (Não corta nomes como VT ou Alana) ---
+        let descLimpa = texto
+            .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$)\b/gi, '')
+            .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
+            .replace(/\s+/g, ' ').trim();
         descLimpa = descLimpa ? descLimpa.charAt(0).toUpperCase() + descLimpa.slice(1) : "Registro";
 
-        const msgGastos = [`Anotado! R$ {valor} indo embora. 💸`, `Gasto de R$ {valor} registrado. 📉`];
-        const msgGanhos = [`Boa! R$ {valor} na conta. 🤑`, `Dinheiro no bolso! Mais R$ {valor}. 💰`];
-        const msgTarefas = [`Missão dada é missão cumprida! Anotei: {desc} 🫡`, `Pode deixar, já anotei na sua agenda! ✅`];
-
-        function sortearMsg(array, v, d = "") { 
-            return array[Math.floor(Math.random() * array.length)]
-                .replace('{valor}', v ? v.toLocaleString('pt-BR') : "")
-                .replace('{desc}', d); 
-        }
+        // --- 🎯 TRAVAS DE LOGICA ---
+        const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
+        const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quais|qual|lista|ver|mostrar|tenho|extrato|o que)\b/)) && !ehComandoRegistro;
 
         // 1. SAUDAÇÕES
         if (/^(ol[aá]|oi|bom dia|boa tarde|boa noite)( astro)?$/i.test(frase)) {
-            return res.status(200).json({ categoria: "conversa", mensagem: `E aí, ${nomeUsuario || 'parceiro'}! O Astro tá na área. O que manda hoje? 🚀` });
+            return res.status(200).json({ categoria: "conversa", mensagem: `E aí, ${nomeUsuario || 'parceiro'}! O que manda hoje? 🚀` });
         }
 
-        // 2. EXCLUSÕES (PAGAMENTOS)
-        if (frase.includes("me pagou") || frase.includes("quitou")) {
-            let nome = frase.replace(/\b(me pagou|quitou|o|a)\b/g, '').trim();
-            return res.status(200).json({ categoria: "exclusao", tipo: "financas", termo_busca: nome, mensagem: `Justo! O ${nome} honrou o compromisso. 🤝` });
+        // 2. CONSULTAS (Só entra se NÃO for comando de registro)
+        if (ehPergunta) {
+            let resp = { categoria: "consulta", tipo: "gastos", mensagem: "Resumo financeiro: 📊👇" };
+            if (frase.match(/(devo|pagar|dividas)/) && frase.includes("eu")) resp.tipo = "minhas_dividas";
+            else if (frase.match(/(deve|devendo|me devem)/)) resp.tipo = "dividas";
+            else if (frase.match(/(recebi|ganhos|entrada)/)) resp.tipo = "entrada";
+            else if (frase.match(/(tarefa|fazer|agenda)/)) resp.tipo = "tarefas";
+            else if (frase.match(/(cofre|guardado|poupanca)/)) resp.tipo = "reserva";
+            return res.status(200).json(resp);
         }
 
-        // 3. DÍVIDAS (QUEM TE DEVE) - PRIORIDADE
-        if (frase.match(/(deve|devendo|pagar)/) && !frase.includes("eu") && valor) {
-            return res.status(200).json({ 
-                categoria: "financa", tipo: "divida", valor: valor, 
-                descricao_limpa: descLimpa, 
-                mensagem: `Tá no caderninho! ✍️ ${descLimpa} te deve R$ ${valor.toLocaleString('pt-BR')}.` 
-            });
-        }
-
-        // 4. CONSULTAS (PERGUNTAS)
-        const ehPergunta = frase.includes("?") || frase.match(/\b(quem|quanto|quando|quais|qual|lista|ver|mostrar|tenho|extrato|o que)\b/);
-        const ehComandoRegistro = frase.match(/\b(registre|anote|salve|anotar)\b/);
-
-        if (ehPergunta && !ehComandoRegistro) {
-            let resposta = { categoria: "consulta", tipo: "gastos", mensagem: "Resumo financeiro: 📊👇" };
-            if (frase.match(/(devo|minhas dividas|pagar)/)) { resposta.tipo = "minhas_dividas"; resposta.mensagem = "Suas contas a pagar: 💸👇"; }
-            else if (frase.match(/(me deve|me devem|dividas)/)) { resposta.tipo = "dividas"; resposta.mensagem = "Lista de quem tá no caderninho: 📜👇"; }
-            else if (frase.match(/(recebi|ganhos|entradas)/)) { resposta.tipo = "entrada"; resposta.mensagem = "Suas entradas: 📈👇"; }
-            else if (frase.match(/(tarefa|fazer|agenda)/)) { resposta.tipo = "tarefas"; resposta.mensagem = "Sua agenda: 🎯👇"; }
-            return res.status(200).json(resposta);
-        }
-
-        // 5. REGISTROS (AQUI É ONDE SALVA A DULCE E O LIXEIRO)
+        // 3. REGISTROS FINANCEIROS
         if (valor) {
-            if (frase.match(/(guardei|poupanca|cofre)/)) 
-                return res.status(200).json({ categoria: "financa", tipo: "reserva", valor: valor, descricao_limpa: descLimpa, mensagem: sortearMsg(msgGanhos, valor) });
+            let tipo = "saida";
+            let msg = `Anotado! R$ ${valor.toLocaleString('pt-BR')} registrado. 📉`;
             
-            if (frase.match(/(recebi|ganhei|entrou|vendi)/))
-                return res.status(200).json({ categoria: "financa", tipo: "entrada", valor: valor, descricao_limpa: descLimpa, mensagem: sortearMsg(msgGanhos, valor) });
+            if (frase.match(/(recebi|ganhei|entrou|vendi)/)) {
+                tipo = "entrada";
+                msg = `Dinheiro no bolso! Mais R$ ${valor.toLocaleString('pt-BR')}. 💰`;
+            } else if (frase.match(/(guardei|poupanca|cofre|reserva)/)) {
+                tipo = "reserva";
+                msg = `Aí sim! R$ ${valor.toLocaleString('pt-BR')} guardados no cofre. 💰🔒`;
+            } else if (frase.match(/(deve|devendo)/) && !frase.includes("eu")) {
+                tipo = "divida";
+                msg = `Tá no caderninho! ${descLimpa} te deve R$ ${valor.toLocaleString('pt-BR')}. ✍️`;
+            } else if (frase.includes("eu devo") || frase.includes("estou devendo")) {
+                tipo = "minhas_dividas";
+                msg = `Anotado. Você deve R$ ${valor.toLocaleString('pt-BR')} (${descLimpa}). 📝`;
+            }
 
-            return res.status(200).json({ categoria: "financa", tipo: "saida", valor: valor, descricao_limpa: descLimpa, mensagem: sortearMsg(msgGastos, valor) });
+            return res.status(200).json({ categoria: "financa", tipo, valor, descricao_limpa: descLimpa, mensagem: msg });
         }
 
-        // 6. TAREFAS (CASO DULCE)
-        if (frase.match(/\b(esperando|ir|fazer|comprar|lembrar|anote|registre|tarefa)\b/) || ehComandoRegistro) {
+        // 4. TAREFAS (CASO DULCE)
+        if (frase.match(/\b(esperando|ir|fazer|comprar|lembrar|tarefa)\b/) || ehComandoRegistro) {
             return res.status(200).json({ 
                 categoria: "tarefa", tipo: "pendente", 
                 descricao_limpa: descLimpa, 
-                mensagem: sortearMsg(msgTarefas, null, descLimpa) 
+                mensagem: `Pode deixar, já anotei na sua agenda: ${descLimpa} ✅` 
             });
         }
 
-        return res.status(200).json({ categoria: "conversa", mensagem: "Não entendi bem, parceiro. Quer registrar um gasto, uma dívida ou uma tarefa? 🚀" });
+        return res.status(200).json({ categoria: "conversa", mensagem: "Não entendi, chefe. Quer registrar algo ou ver seu extrato? 🚀" });
         
     } catch (erro) {
         return res.status(500).json({ erro: "Erro interno", detalhes: erro.message });
