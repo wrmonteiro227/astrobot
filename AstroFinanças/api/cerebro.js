@@ -9,6 +9,7 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
+        // 1. TRATAMENTO DE VALORES (Consolidado: 50.000 = 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -17,6 +18,7 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
+        // 2. LIMPEZA DE DESCRIÇÃO (Consolidado: Preserva VT Lixeiro)
         let descLimpa = texto
             .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho que pagar|tenho que gastar|fazer o pagamento)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
@@ -25,14 +27,15 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER)
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER ATUALIZADO)
         if (frase.match(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.match(/(tarefa|fazer)/)) tipoExclusao = "tarefas";
             if (frase.match(/(cofre|reserva|poupanca|juntei|guardei|economizei|econimizei)/)) tipoExclusao = "reserva";
             
+            // Lógica Sniper: Captura o termo específico (ex: "danrley" em "apagar saida danrley")
             let termoBusca = frase
-                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|minhas|meu|minha|cofre)\b/g, '')
+                .replace(/\b(apagar|apaga|deletar|excluir|remover|me pagou|quitou|o|a|os|as|minhas|meu|minha|cofre|saida|saidas|gasto|gastos|tarefa|tarefas)\b/g, '')
                 .trim();
 
             return res.status(200).json({ 
@@ -63,15 +66,14 @@ module.exports = async function(req, res) {
                 return res.status(200).json({ categoria: "consulta", tipo: "tarefas", mensagem: "Cronograma de atividades e lembretes:" });
             }
             
-            // SE TIVER "TENHO" MAS NÃO TIVER OUTRA KEYWORD FINANCEIRA, NÃO ABRE GASTOS POR PADRÃO
             if (!frase.match(/\b(gastos|gastei|saidas|compras|contas)\b/) && frase.includes("tenho")) {
-                // Deixa passar para o bloco de tarefas ou erro
+                // Deixa passar
             } else {
                 return res.status(200).json({ categoria: "consulta", tipo: "gastos", mensagem: "Relatório geral de movimentações de saída:" });
             }
         }
 
-        // 5. REGISTROS FINANCEIROS
+        // 5. REGISTROS FINANCEIROS (SÓ ENTRA AQUI SE TIVER VALOR)
         if (valor) {
             if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|tenho que gastar|fazer o pagamento|devo)\b/)) {
                 return res.status(200).json({ categoria: "financa", tipo: "minhas_dividas", valor: valor, descricao_limpa: descLimpa, mensagem: `Compromisso de R$ ${valor.toLocaleString('pt-BR')} registrado.` });
@@ -88,8 +90,9 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "financa", tipo: "saida", valor, descricao_limpa: descLimpa, mensagem: `Movimentação de R$ ${valor.toLocaleString('pt-BR')} confirmada.` });
         }
 
-        // 6. TAREFAS (AMPLIADO PARA CAPTURAR "IR" E "ONDE")
-        if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando|tenho que ir|onde ir|para onde)\b/) || ehComandoRegistro) {
+        // 6. TAREFAS (AMPLIADO COM GATILHO "LEMBRAR" E "TENHO QUE")
+        // Se a frase contiver "lembrar" e NÃO tiver valor, vira tarefa automaticamente.
+        if (frase.match(/\b(tenho que fazer|fazer|ir|lembrar|tarefa|esperando|tenho que ir|onde ir|para onde|anota|anotar)\b/) || ehComandoRegistro) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
 
@@ -102,4 +105,3 @@ module.exports = async function(req, res) {
         return res.status(500).json({ erro: "INTERNAL_CORE_ERROR" });
     }
 };
-
