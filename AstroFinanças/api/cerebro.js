@@ -9,7 +9,7 @@ module.exports = async function(req, res) {
         const { texto, nomeUsuario } = req.body;
         const frase = texto ? texto.toLowerCase().trim() : "";
 
-        // 1. TRATAMENTO DE VALORES (50.000 = 50000)
+        // 1. TRATAMENTO DE VALORES (Garante que 50.000 seja 50000)
         function extrairValor(str) {
             const match = str.match(/\d+(?:\.\d{3})*(?:,\d+)?/);
             if (!match) return null;
@@ -18,7 +18,7 @@ module.exports = async function(req, res) {
         }
         const valor = extrairValor(frase);
 
-        // 2. LIMPEZA DE DESCRIÇÃO (Preserva nomes compostos)
+        // 2. LIMPEZA DE DESCRIÇÃO (Preserva VT Lixeiro, Alana Gorda, etc)
         let descLimpa = texto
             .replace(/\b(registrar|anote|salve|anotar|registra|lembrar|paguei|recebi|gastei|reais|r\$|me pagou|quitou|me deve|eu devo|estou devendo|apagar|deletar|excluir|remover|tenho que|tenho que pagar|tenho que gastar|fazer o pagamento)\b/gi, '')
             .replace(/\d+(?:\.\d{3})*(?:,\d+)?/g, '')
@@ -27,12 +27,11 @@ module.exports = async function(req, res) {
 
         const ehComandoRegistro = frase.match(/\b(registrar|anote|salve|anotar|registra)\b/);
 
-        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - ATUALIZADO)
+        // 3. EXCLUSÃO CIRÚRGICA (MODO SNIPER - CORRIGIDO)
         if (frase.match(/\b(apagar|deletar|excluir|remover|me pagou|quitou)\b/)) {
             let tipoExclusao = "financas";
             if (frase.includes("tarefa")) tipoExclusao = "tarefas";
             
-            // Limpeza agressiva para pegar apenas o ALVO (ex: "Duda")
             let termoBusca = frase
                 .replace(/\b(apagar|deletar|excluir|remover|tarefa|gasto|conta|divida|minhas dividas|me pagou|quitou|o|a|os|as)\b/g, '')
                 .trim();
@@ -45,18 +44,27 @@ module.exports = async function(req, res) {
             });
         }
 
-        // 4. CONSULTAS
+        // 4. CONSULTAS (RECUPERADO: ENTRADAS/GANHOS)
         const ehPergunta = (frase.includes("?") || frase.match(/\b(quem|quanto|quando|quand|mostrar|lista|tenho|extrato|ver|quais)\b/)) && !ehComandoRegistro;
         if (ehPergunta) {
             let tipo = "gastos";
-            if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas|devo|quanto devo|quando devo)\b/)) {
+            
+            // Regra para Ganhos/Recebimentos
+            if (frase.match(/\b(recebi|ganhei|ganho|ganhos|entrou|entrada|entradas|vendi)\b/)) {
+                tipo = "entrada";
+                return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de entradas e ganhos identificados:" });
+            }
+            // Regra para Dívidas Suas
+            else if (frase.match(/\b(eu devo|estou devendo|tenho que pagar|minhas dividas|devo|quanto devo|quando devo)\b/)) {
                 tipo = "minhas_dividas";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de obrigações financeiras:" });
             } 
+            // Regra para Dívidas dos Outros
             else if (frase.match(/\b(me deve|me devem|devendo|divida|quem deve|quem esta|quem está)\b/)) {
                 tipo = "dividas";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Relatório de valores a receber:" });
             }
+            // Regra para Tarefas
             else if (frase.match(/(tarefa|fazer|agenda|compromisso)/)) {
                 tipo = "tarefas";
                 return res.status(200).json({ categoria: "consulta", tipo, mensagem: "Cronograma de tarefas pendentes:" });
@@ -88,6 +96,7 @@ module.exports = async function(req, res) {
             return res.status(200).json({ categoria: "tarefa", tipo: "pendente", descricao_limpa: descLimpa, mensagem: `Lembrete indexado: ${descLimpa}.` });
         }
 
+        // --- MENSAGEM DE ERRO PROFISSIONAL ---
         return res.status(200).json({ 
             categoria: "conversa", 
             mensagem: `Não foi possível processar este comando. O Astro ainda não reconhece essa estrutura.\n\nPor favor, tente utilizar palavras-chave como: registrar, pagar, receber ou apagar para uma melhor indexação.` 
