@@ -119,22 +119,22 @@
         }
 
         function obterDataFiltro(periodo) {
-            const data = new Date();
-            data.setHours(0,0,0,0);
-            if (periodo === 'hoje') return data.getTime();
+            const agora = new Date();
+            const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime();
+            if (periodo === 'hoje') return { inicio: hoje, fim: 9999999999999 };
             if (periodo === 'ontem') {
-                data.setDate(data.getDate() - 1);
-                return { inicio: data.getTime(), fim: new Date().setHours(0,0,0,0) };
+                const ontem = hoje - (24 * 60 * 60 * 1000);
+                return { inicio: ontem, fim: hoje };
             }
             if (periodo === 'semana') {
-                data.setDate(data.getDate() - data.getDay());
-                return data.getTime();
+                const inicioSem = hoje - (agora.getDay() * 24 * 60 * 60 * 1000);
+                return { inicio: inicioSem, fim: 9999999999999 };
             }
             if (periodo === 'mes') {
-                data.setDate(1);
-                return data.getTime();
+                const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+                return { inicio: inicioMes, fim: 9999999999999 };
             }
-            return 0;
+            return { inicio: 0, fim: 9999999999999 };
         }
 
         let aguardandoLimpeza = false;
@@ -143,10 +143,9 @@
             const messageInput = document.getElementById('message-input');
             const texto = messageInput.value.trim();
             if (texto === '' || !meuSupabase) return;
-
             adicionarMensagem(texto, 'user');
             messageInput.value = '';
-            let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
+            let textoTratado = texto.toLowerCase().trim();
 
             try {
                 if (aguardandoLimpeza) {
@@ -168,51 +167,37 @@
                 }
 
                 const idCarregando = "msg-" + Date.now();
-                adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
-
-                const resAPI = await fetch('/api/cerebro', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ texto: texto, nomeUsuario: nomeUsuario, historico: historicoConversa })
-                });
-
+                adicionarMensagem("Astro pensando...", "bot temp", idCarregando);
+                const resAPI = await fetch('/api/cerebro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto, nomeUsuario, historico: historicoConversa }) });
                 document.getElementById(idCarregando).remove();
                 const analise = await resAPI.json();
 
-                const comandoSalvar = textoTratado.includes('registre') || textoTratado.includes('anote') || textoTratado.includes('salve') || textoTratado.includes('anotar');
+                if (analise.categoria === 'financa') {
+                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
+                    adicionarMensagem(analise.mensagem, 'bot');
 
-                if (analise.categoria === 'financa' || (comandoSalvar && (textoTratado.includes('reais') || textoTratado.includes('me deve')))) {
-                    if (analise.valor === null || analise.valor === undefined) {
-                        adicionarMensagem("Putz, entendi que é financeiro, mas faltou o valor. Manda de novo com o número?", 'bot');
-                        return;
-                    }
-                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo || 'saida', valor: analise.valor }]);
-                    adicionarMensagem(analise.mensagem || "Feito! Já registrei aqui. 💰", 'bot');
-
-                    // --- SENSOR DE METAS (PILAR 3) ---
-                    if (analise.tipo === 'saida' || analise.tipo === 'reserva') {
-                        const { data: metas } = await meuSupabase.from('metas').select('*').eq('cliente_id', idUsuario).ilike('descricao', `%${analise.descricao_limpa}%`);
-                        if (metas && metas.length > 0) {
-                            const meta = metas[0];
-                            const { data: gastos } = await meuSupabase.from('financas').select('valor').eq('cliente_id', idUsuario).eq('tipo', analise.tipo).ilike('descricao', `%${meta.descricao}%`);
-                            const totalGasto = gastos ? gastos.reduce((acc, curr) => acc + curr.valor, 0) : 0;
-                            if (totalGasto > meta.valor) {
-                                setTimeout(() => { adicionarMensagem(`⚠️ ALERTA: Você ultrapassou sua meta de ${meta.descricao}! (Meta: R$ ${meta.valor} | Total: R$ ${totalGasto})`, 'bot'); }, 1000);
-                            } else if (totalGasto >= meta.valor * 0.8) {
-                                setTimeout(() => { adicionarMensagem(`📢 Atenção: Você já atingiu 80% da sua meta de ${meta.descricao}.`, 'bot'); }, 1000);
+                    const { data: metas } = await meuSupabase.from('metas').select('*').eq('cliente_id', idUsuario);
+                    if (metas) {
+                        for (const meta of metas) {
+                            if (textoTratado.includes(meta.descricao.toLowerCase().substring(0, 4))) {
+                                const { data: gastos } = await meuSupabase.from('financas').select('valor').eq('cliente_id', idUsuario).eq('tipo', meta.tipo).ilike('descricao', `%${meta.descricao.substring(0, 4)}%`);
+                                const total = gastos ? gastos.reduce((acc, curr) => acc + curr.valor, 0) : 0;
+                                if (total > meta.valor) {
+                                    setTimeout(() => adicionarMensagem(`⚠️ ALERTA: Meta de ${meta.descricao} estourada! Total: R$ ${total.toFixed(2)} (Limite: R$ ${meta.valor})`, 'bot'), 800);
+                                }
                             }
                         }
                     }
 
-                } else if (analise.categoria === 'tarefa' || comandoSalvar) {
-                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa || texto, status: 'pendente' }]);
-                    adicionarMensagem("Entendido! Já anotei essa tarefa para você. ✅", 'bot');
+                } else if (analise.categoria === 'tarefa') {
+                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa, status: 'pendente' }]);
+                    adicionarMensagem(analise.mensagem, 'bot');
 
                 } else if (analise.categoria === 'update') {
                     const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
-                    const colunaStatus = (tabela === 'tarefas') ? 'status' : 'pago';
-                    const novoValor = (tabela === 'tarefas') ? 'concluido' : true;
-                    await meuSupabase.from(tabela).update({ [colunaStatus]: novoValor }).eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
+                    const colStatus = (tabela === 'tarefas') ? 'status' : 'pago';
+                    const valStatus = (tabela === 'tarefas') ? 'concluido' : true;
+                    await meuSupabase.from(tabela).update({ [colStatus]: valStatus }).eq('cliente_id', idUsuario).ilike('descricao', `%${analise.termo_busca}%`);
                     adicionarMensagem(analise.mensagem, 'bot');
 
                 } else if (analise.categoria === 'meta') {
@@ -227,25 +212,33 @@
                     adicionarMensagem(analise.mensagem, 'bot');
 
                 } else if (analise.categoria === 'consulta') {
-                    let tabela = 'tarefas'; let filtro = 'pendente';
-                    if (analise.tipo === 'gastos') { tabela = 'financas'; filtro = 'saida'; }
-                    else if (analise.tipo === 'dividas') { tabela = 'financas'; filtro = 'divida'; }
-                    else if (analise.tipo === 'entrada') { tabela = 'financas'; filtro = 'entrada'; }
-                    else if (analise.tipo === 'reserva') { tabela = 'financas'; filtro = 'reserva'; }
-                    else if (analise.tipo === 'minhas_dividas') { tabela = 'financas'; filtro = 'minhas_dividas'; }
+                    let tabela = 'tarefas'; let campo = 'status'; let filtro = 'pendente';
+                    if (analise.tipo === 'gastos') { tabela = 'financas'; campo = 'tipo'; filtro = 'saida'; }
+                    else if (analise.tipo === 'entrada') { tabela = 'financas'; campo = 'tipo'; filtro = 'entrada'; }
+                    else if (analise.tipo === 'reserva') { tabela = 'financas'; campo = 'tipo'; filtro = 'reserva'; }
+                    else if (analise.tipo === 'dividas') { tabela = 'financas'; campo = 'tipo'; filtro = 'divida'; }
+                    else if (analise.tipo === 'minhas_dividas') { tabela = 'financas'; campo = 'tipo'; filtro = 'minhas_dividas'; }
+
                     const { data } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(tabela === 'financas' ? 'tipo' : 'status', filtro);
-                    const ts = obterDataFiltro(analise.periodo || 'tudo');
-                    let iv = data ? data.filter(i => !i.created_at || new Date(i.created_at).getTime() >= ts) : [];
-                    if (iv.length > 0) {
-                        let res = (analise.mensagem || "Aqui está:") + "\n\n";
-                        if (tabela === 'financas') { let t = 0; iv.forEach(i => { t += i.valor; res += `R$ ${i.valor.toFixed(2)} - ${i.descricao}\n`; }); res += `💰 Total: R$ ${t.toFixed(2)}`; }
-                        else res += iv.map(it => `• ${it.descricao}`).join('\n');
-                        adicionarMensagem(res, 'bot');
-                    } else adicionarMensagem("Nada encontrado nesse período. 😎", 'bot');
+                    const range = obterDataFiltro(analise.periodo);
+                    let filtrados = data ? data.filter(i => {
+                        const time = new Date(i.created_at).getTime();
+                        return time >= range.inicio && time < range.fim;
+                    }) : [];
+
+                    if (filtrados.length > 0) {
+                        let msg = analise.mensagem + "\n\n";
+                        if (tabela === 'financas') {
+                            let total = 0;
+                            filtrados.forEach(i => { total += i.valor; msg += `R$ ${i.valor.toFixed(2)} - ${i.descricao}\n`; });
+                            msg += `💰 Total: R$ ${total.toFixed(2)}`;
+                        } else msg += filtrados.map(i => `• ${i.descricao}`).join('\n');
+                        adicionarMensagem(msg, 'bot');
+                    } else adicionarMensagem("Nada encontrado para este período. 😎", 'bot');
                 } else {
                     adicionarMensagem(analise.mensagem, 'bot');
                 }
-            } catch (e) { adicionarMensagem("⚠️ Erro no processamento.", "bot"); }
+            } catch (e) { console.error(e); adicionarMensagem("Erro no sistema, Stark.", "bot"); }
         }
 
         const btnMic = document.querySelector('.btn-mic');
@@ -259,15 +252,6 @@
             rec.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; resetMic(); enviarMensagem(); };
             rec.onend = () => resetMic();
             function resetMic() { btnMic.textContent = '🎙️'; document.getElementById('message-input').style.display = 'block'; document.getElementById('voice-visualizer').style.display = 'none'; document.getElementById('voice-visualizer').classList.remove('is-recording'); }
-        }
-
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-        let promptI;
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); promptI = e; document.getElementById('btn-install').style.display = 'block'; });
-        document.getElementById('btn-install').addEventListener('click', () => { if (promptI) { promptI.prompt(); promptI = null; } });
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        if (isIOS && !window.matchMedia('(display-mode: standalone)').matches) {
-            setTimeout(() => adicionarMensagem("💡 Dica para iPhone: Toque no ícone de compartilhar e depois em 'Adicionar à Tela de Início'! 📲", "bot"), 6000);
         }
     </script>
 </body>
