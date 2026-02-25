@@ -103,7 +103,6 @@
         let meuSupabase = null;
         try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
 
-        // 🔒 CADEADO DE VENCIMENTO DO SAAS
         async function validarVencimento() {
             if (!meuSupabase || !idUsuario) return;
             const { data } = await meuSupabase.from('clientes').select('data_vencimento').eq('id', idUsuario).single();
@@ -154,7 +153,8 @@
                     const labels = { '1': 'GASTOS', '2': 'GANHOS', '3': 'tarefas', '4': 'cofre', '5': 'contas a pagar', '6': 'dívidas dos outros' };
                     
                     if (tipos[textoTratado]) {
-                        await meuSupabase.from('financas').delete().eq('tipo', types[textoTratado]).eq('cliente_id', idUsuario);
+                        // Ajuste aqui: trocado 'types' por 'tipos'
+                        await meuSupabase.from('financas').delete().eq('tipo', tipos[textoTratado]).eq('cliente_id', idUsuario);
                     } else if (textoTratado === '3') {
                         await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
                     } else if (textoTratado === '7') {
@@ -223,7 +223,18 @@
             e.preventDefault(); promptI = e; document.getElementById('btn-install').style.display = 'block';
         });
         document.getElementById('btn-install').addEventListener('click', () => { if (promptI) promptI.prompt(); });
+        
+        // ==========================================
+        // 🍎 DICA DE INSTALAÇÃO PARA IPHONE (iOS) 🍎
+        // ==========================================
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+
+        if (isIOS && !isStandalone) {
+            setTimeout(() => {
+                adicionarMensagem("💡 Vi que você está no iPhone! Para instalar o Astro como um Aplicativo: \n\n1️⃣ Clique no botão de compartilhar (o quadrado com uma seta para cima no Safari).\n2️⃣ Role para baixo e clique em 'Adicionar à Tela de Início'. 📲", "bot");
+            }, 6000);
+        }
     </script>
 </body>
 </html>
-
