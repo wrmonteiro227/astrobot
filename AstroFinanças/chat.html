@@ -1,253 +1,55 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro | Chat Inteligente</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#111827">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
-        body { background-color: #0B0F19; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; background: #111827; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
-        #lock-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0B0F19; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
-        .lock-icon { font-size: 60px; margin-bottom: 20px; }
-        .lock-title { font-size: 24px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #FF4B2B, #FF416C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .lock-text { color: #9CA3AF; margin-bottom: 30px; line-height: 1.5; }
-        .btn-renew { background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 15px 30px; border-radius: 15px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); border: none; cursor: pointer; }
-        .chat-header { padding: 15px 20px; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; z-index: 10; }
-        .header-avatar { width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3B82F6, #8B5CF6); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .header-info { display: flex; flex-direction: column; }
-        .bot-name { font-weight: 600; font-size: 18px; letter-spacing: 0.5px; }
-        .bot-status { font-size: 12px; color: #10B981; display: flex; align-items: center; gap: 4px; }
-        .bot-status::before { content: ''; width: 6px; height: 6px; background-color: #10B981; border-radius: 50%; display: inline-block; }
-        #btn-install { display: none; margin-left: auto; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; }
-        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%); }
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; animation: fadeIn 0.3s ease; white-space: pre-wrap; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .message.bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; color: #E5E7EB; }
-        .message.user { align-self: flex-end; background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: #FFFFFF; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2); }
-        .message.temp { opacity: 0.6; font-style: italic; }
-        .chat-input-area { padding: 15px 20px; background: #111827; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
-        .input-wrapper { flex-grow: 1; display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border-radius: 25px; padding: 5px 15px; border: 1px solid rgba(255, 255, 255, 0.1); height: 50px; }
-        .chat-input { width: 100%; background: transparent; border: none; color: white; padding: 10px 0; outline: none; font-size: 15px; }
-        #voice-visualizer { flex-grow: 1; display: none; align-items: center; justify-content: center; gap: 4px; height: 40px; }
-        .bar { width: 3px; background-color: #EF4444; border-radius: 2px; height: 4px; }
-        .is-recording .bar { animation: sound 0.5s infinite alternate; }
-        .bar:nth-child(1) { animation-duration: 0.4s; }
-        .bar:nth-child(2) { animation-duration: 0.6s; }
-        .bar:nth-child(3) { animation-duration: 0.5s; }
-        .bar:nth-child(4) { animation-duration: 0.7s; }
-        .bar:nth-child(5) { animation-duration: 0.4s; }
-        @keyframes sound { 0% { height: 4px; opacity: 0.35; } 100% { height: 28px; opacity: 1; } }
-    </style>
-</head>
-<body>
-    <div class="app-container">
-        <div id="lock-screen">
-            <div class="lock-icon">🔒</div>
-            <h2 class="lock-title">Assinatura Vencida</h2>
-            <p class="lock-text">Para continuar usando a Inteligência do Astro e não perder seus registros, renove seu acesso mensal agora.</p>
-            <button onclick="logoutERenovar()" class="btn-renew">Renovar Acesso - R$ 14,99</button>
-        </div>
-        <header class="chat-header">
-            <div class="header-avatar"><img src="https://files.catbox.moe/p862f1.png" alt="Astro Bot"></div>
-            <div class="header-info"><span class="bot-name">Astro Inteligente</span><span class="bot-status">Online</span></div>
-            <button id="btn-install">📲 Instalar App</button>
-        </header>
-        <main class="chat-messages" id="chat-messages"></main>
-        <footer class="chat-input-area">
-            <div class="input-wrapper">
-                <input type="text" class="chat-input" id="message-input" placeholder="Converse comigo..." onkeypress="verificarEnter(event)">
-                <div id="voice-visualizer">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-                <button class="action-btn-chat btn-mic">🎙️</button>
-            </div>
-            <button class="action-btn-chat" style="color: #3B82F6; background:none; border:none; font-size:20px; cursor:pointer;" onclick="enviarMensagem()">➤</button>
-        </footer>
-    </div>
+// Substitua a função obterFiltrosTemporais e o bloco de consulta por este:
 
-    <script>
-        function logoutERenovar() { localStorage.removeItem('astro_usuario_logado'); window.location.href = 'index.html'; }
-        function verificarEnter(event) { if (event.key === 'Enter') enviarMensagem(); }
+function obterFiltrosTemporais(periodo) {
+    const agora = new Date();
+    // Normaliza para o início do dia local (00:00:00)
+    const hojeInicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime();
+    const umDia = 86400000;
 
-        const dadosBrutos = localStorage.getItem('astro_usuario_logado');
-        let usuarioLogado = null;
-        try { usuarioLogado = dadosBrutos ? JSON.parse(dadosBrutos) : null; } catch (e) { usuarioLogado = null; }
-        if (!usuarioLogado || !usuarioLogado.nome) { window.location.href = 'login.html'; }
+    if (periodo === 'hoje') {
+        return { inicio: hojeInicio, fim: Infinity };
+    }
+    if (periodo === 'ontem') {
+        return { inicio: hojeInicio - umDia, fim: hojeInicio - 1 };
+    }
+    if (periodo === 'mes_atual') {
+        return { inicio: new Date(agora.getFullYear(), agora.getMonth(), 1).getTime(), fim: Infinity };
+    }
+    return { inicio: 0, fim: Infinity };
+}
 
-        const nomeUsuario = usuarioLogado.nome;
-        const idUsuario = usuarioLogado.id;
-        const urlAstro = 'https://zqvfnykxwlcozvawqgrn.supabase.co';
-        const chaveAstro = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmZueWt4d2xjb3p2YXdxZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDkzNDQsImV4cCI6MjA4NTMyNTM0NH0.CevpF9vP4748mb2vFNsOp5Kq6u7Nfp_100bJcW7ogUQ';
-        let meuSupabase = null;
-        try { if (window.supabase) meuSupabase = window.supabase.createClient(urlAstro, chaveAstro); } catch (e) { console.error("Erro Supabase", e); }
+// ... No seu enviarMensagem(), dentro do analise.categoria === 'consulta':
 
-        async function validarVencimento() {
-            if (!meuSupabase || !idUsuario) return;
-            const { data } = await meuSupabase.from('clientes').select('data_vencimento').eq('id', idUsuario).single();
-            if (data && data.data_vencimento && (new Date() > new Date(data.data_vencimento))) {
-                document.getElementById('lock-screen').style.display = 'flex';
+} else if (analise.categoria === 'consulta') {
+    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
+    const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
+    
+    if (error) { console.error(error); return; }
+
+    const f = obterFiltrosTemporais(analise.periodo);
+    
+    // Filtro Robusto: Converte created_at para milissegundos e compara
+    let filtrados = data ? data.filter(item => {
+        const dataItem = new Date(item.created_at).getTime();
+        return dataItem >= f.inicio && dataItem <= f.fim;
+    }) : [];
+
+    if (filtrados.length > 0) {
+        let r = `Aqui está o seu relatório, Tony:\n\n`;
+        let total = 0;
+        filtrados.forEach(i => {
+            const dataObjeto = new Date(i.created_at);
+            const dataFormatada = dataObjeto.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+            if (tabela === 'financas') {
+                total += i.valor;
+                r += `📅 ${dataFormatada} - R$ ${i.valor.toFixed(2)} (${i.descricao})\n`;
+            } else {
+                r += `• ${i.descricao}\n`;
             }
-        }
-
-        let historicoConversa = [];
-
-        document.addEventListener('DOMContentLoaded', () => {
-            validarVencimento();
-            const msgBoasVindas = `E aí, ${nomeUsuario}! Fui turbinado. Lembro das nossas conversas, organizo seus gastos, cobro quem te deve e agora temos a opção **Cofre**! 💰🔒 O que manda hoje? 🚀`;
-            adicionarMensagem(msgBoasVindas, 'bot');
         });
-
-        function adicionarMensagem(texto, remetente, id = null) {
-            const chatMessages = document.getElementById('chat-messages');
-            const msg = document.createElement('div');
-            msg.className = `message ${remetente}`;
-            if (id) msg.id = id;
-            msg.textContent = texto;
-            chatMessages.appendChild(msg);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            if (id === null) {
-                historicoConversa.push({ role: remetente === 'user' ? 'user' : 'bot', content: texto });
-                if (historicoConversa.length > 6) historicoConversa.shift();
-            }
-            return msg;
-        }
-
-        function obterFiltrosTemporais(periodo) {
-            const agora = new Date();
-            const hojeInicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime();
-            const umDia = 86400000;
-
-            if (periodo === 'hoje') return { inicio: hojeInicio, fim: Infinity };
-            if (periodo === 'ontem') return { inicio: hojeInicio - umDia, fim: hojeInicio - 1 };
-            if (periodo === 'semana_atual') return { inicio: hojeInicio - (agora.getDay() * umDia), fim: Infinity };
-            if (periodo === 'semana_passada') {
-                const domPassado = hojeInicio - (agora.getDay() * umDia) - (7 * umDia);
-                return { inicio: domPassado, fim: domPassado + (7 * umDia) - 1 };
-            }
-            if (periodo === 'mes_atual') return { inicio: new Date(agora.getFullYear(), agora.getMonth(), 1).getTime(), fim: Infinity };
-            if (periodo === 'mes_passado') {
-                const inicio = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).getTime();
-                const fim = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59).getTime();
-                return { inicio, fim };
-            }
-            if (periodo.startsWith('mes_')) {
-                const m = parseInt(periodo.split('_')[1]);
-                return { inicio: new Date(agora.getFullYear(), m, 1).getTime(), fim: new Date(agora.getFullYear(), m + 1, 0, 23, 59, 59).getTime() };
-            }
-            return { inicio: 0, fim: Infinity };
-        }
-
-        let aguardandoLimpeza = false;
-
-        async function enviarMensagem() {
-            const messageInput = document.getElementById('message-input');
-            const texto = messageInput.value.trim();
-            if (texto === '' || !meuSupabase) return;
-
-            adicionarMensagem(texto, 'user');
-            messageInput.value = '';
-            let textoTratado = texto.toLowerCase().replace(/[.,!?]/g, '').trim();
-
-            try {
-                if (aguardandoLimpeza) {
-                    const tipos = { '1': 'saida', '2': 'entrada', '4': 'reserva', '5': 'minhas_dividas', '6': 'divida' };
-                    const labels = { '1': 'GASTOS', '2': 'GANHOS', '3': 'tarefas', '4': 'cofre', '5': 'contas a pagar', '6': 'dívidas dos outros' };
-                    if (tipos[textoTratado]) await meuSupabase.from('financas').delete().eq('tipo', tipos[textoTratado]).eq('cliente_id', idUsuario);
-                    else if (textoTratado === '3') await meuSupabase.from('tarefas').delete().eq('cliente_id', idUsuario);
-                    else if (textoTratado === '7') { aguardandoLimpeza = false; adicionarMensagem("Operação cancelada! 👍", 'bot'); return; }
-                    else return;
-                    aguardandoLimpeza = false;
-                    setTimeout(() => adicionarMensagem(`🗑️ Histórico de ${labels[textoTratado]} apagado!`, 'bot'), 400);
-                    return;
-                }
-
-                if (textoTratado === 'limpar' || textoTratado === 'apagar') {
-                    aguardandoLimpeza = true;
-                    adicionarMensagem(`⚠️ MODO DE LIMPEZA ATIVADO\n1️⃣ Gastos\n2️⃣ Ganhos\n3️⃣ Tarefas\n4️⃣ Cofre\n5️⃣ Quem eu devo\n6️⃣ Quem me deve\n7️⃣ Cancelar`, 'bot');
-                    return;
-                }
-
-                const idCarregando = "msg-" + Date.now();
-                adicionarMensagem("Astro está pensando...", "bot temp", idCarregando);
-
-                const resAPI = await fetch('/api/cerebro', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ texto: texto, nomeUsuario: nomeUsuario, historico: historicoConversa })
-                });
-
-                document.getElementById(idCarregando).remove();
-                const analise = await resAPI.json();
-
-                if (analise.categoria === 'financa') {
-                    await meuSupabase.from('financas').insert([{ cliente_id: idUsuario, descricao: texto, tipo: analise.tipo, valor: analise.valor }]);
-                    adicionarMensagem(analise.mensagem, 'bot');
-
-                } else if (analise.categoria === 'tarefa') {
-                    await meuSupabase.from('tarefas').insert([{ cliente_id: idUsuario, descricao: analise.descricao_limpa, status: 'pendente' }]);
-                    adicionarMensagem(analise.mensagem, 'bot');
-
-                } else if (analise.categoria === 'exclusao') {
-                    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
-                    let query = meuSupabase.from(tabela).delete().eq('cliente_id', idUsuario);
-                    if (tabela === 'financas' && analise.tipo !== 'financas') query = query.eq('tipo', analise.tipo);
-                    await query.ilike('descricao', `%${analise.termo_busca}%`);
-                    adicionarMensagem(analise.mensagem, 'bot');
-
-                } else if (analise.categoria === 'consulta') {
-                    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
-                    let filtroTipo = 'saida';
-                    if (analise.tipo === 'entrada') filtroTipo = 'entrada';
-                    else if (analise.tipo === 'reserva') filtroTipo = 'reserva';
-                    else if (analise.tipo === 'dividas') filtroTipo = 'divida';
-                    else if (analise.tipo === 'minhas_dividas') filtroTipo = 'minhas_dividas';
-
-                    const { data } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario).eq(tabela === 'financas' ? 'tipo' : 'status', tabela === 'financas' ? filtroTipo : 'pendente');
-                    
-                    const f = obterFiltrosTemporais(analise.periodo);
-                    let filtrados = data ? data.filter(i => {
-                        const ts = new Date(i.created_at).getTime();
-                        return ts >= f.inicio && ts <= f.fim;
-                    }) : [];
-
-                    if (filtrados.length > 0) {
-                        let res = `${analise.mensagem}\n\n`;
-                        if (tabela === 'financas') {
-                            let t = 0;
-                            filtrados.forEach(i => {
-                                const d = new Date(i.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-                                t += i.valor;
-                                res += `📅 ${d} - R$ ${i.valor.toFixed(2)} (${i.descricao})\n`;
-                            });
-                            res += `\n💰 Total: R$ ${t.toFixed(2)}`;
-                        } else res += filtrados.map(it => `• ${it.descricao}`).join('\n');
-                        adicionarMensagem(res, 'bot');
-                    } else adicionarMensagem(`Nada encontrado para este período. 😎`, 'bot');
-
-                } else {
-                    adicionarMensagem(analise.mensagem, 'bot');
-                }
-            } catch (e) { adicionarMensagem("⚠️ Erro no processamento.", "bot"); }
-        }
-
-        const btnMic = document.querySelector('.btn-mic');
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SR) {
-            const rec = new SR(); rec.lang = 'pt-BR';
-            btnMic.addEventListener('click', () => {
-                rec.start(); btnMic.textContent = '🔴'; document.getElementById('message-input').style.display = 'none';
-                document.getElementById('voice-visualizer').style.display = 'flex'; document.getElementById('voice-visualizer').classList.add('is-recording');
-            });
-            rec.onresult = (e) => { document.getElementById('message-input').value = e.results[0][0].transcript; resetMic(); enviarMensagem(); };
-            rec.onend = () => resetMic();
-            function resetMic() { btnMic.textContent = '🎙️'; document.getElementById('message-input').style.display = 'block'; document.getElementById('voice-visualizer').style.display = 'none'; document.getElementById('voice-visualizer').classList.remove('is-recording'); }
-        }
-    </script>
-</body>
-</html>
+        if (tabela === 'financas') r += `\n💰 TOTAL: R$ ${total.toFixed(2)}`;
+        adicionarMensagem(r, 'bot');
+    } else {
+        adicionarMensagem(`Nenhum registro encontrado para "${analise.periodo}". 😎`, 'bot');
+    }
+}
