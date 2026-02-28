@@ -1,4 +1,4 @@
-// cerebro.js - Versão Consolidada Tony Stark
+// cerebro.js - VERSÃO CONSOLIDADA TONY STARK (NÃO SIMPLIFICAR)
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -7,10 +7,10 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
-        const { message } = req.body;
+        const { message, userId } = req.body;
         const input = message.toLowerCase().trim();
 
-        // --- REGEX DE MILHAR E VALORES (CONSOLIDADO) ---
+        // --- REGEX DE ESTRESSE (CONSOLIDADO) ---
         const regexValor = /(?:r\$\s?|vlr\s?)?(\d{1,3}(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/i;
 
         // --- IDENTIFICAÇÃO DE INTENÇÕES ---
@@ -20,54 +20,62 @@ export default async function handler(req, res) {
         const isReserva = /\b(guardei|reservei|cofre|poupar|reserva)\b/i.test(input);
         const isConsulta = /\b(quanto|listar|extrato|quais|ver)\b/i.test(input);
 
-        // --- LÓGICA SNIPER (EXCLUSÃO) ---
+        // 1. LÓGICA SNIPER (EXCLUSÃO)
         if (isExclusao) {
             let termo = input.replace(/\b(apagar|deletar|excluir|remover|tira|o|a|os|as|limpar)\b/gi, '').trim();
             const tabela = isTarefa ? 'tarefas' : 'financas';
             return res.status(200).json({
                 tipo: "exclusao_sniper",
-                mensagem: `Sniper ativado. Removi "${termo}" da sua lista de ${tabela === 'tarefas' ? 'tarefas' : 'finanças'}.`,
+                mensagem: `Sniper ativado. Removi "${termo}" da sua base de dados.`,
                 payload: { termo, tabela }
             });
         }
 
-        // --- LÓGICA DE REGISTRO FINANCEIRO (VALOR 50.000) ---
+        // 2. REGISTRO FINANCEIRO (TRATAMENTO 50.000)
         if (!isConsulta && (isDivida || isReserva)) {
             const matchValor = input.match(regexValor);
             if (matchValor) {
-                // Tratamento de milhar: remove pontos e troca vírgula por ponto
                 let valorLimpo = matchValor[1].replace(/\./g, '').replace(',', '.');
                 let descricao = input.replace(matchValor[0], '')
                                      .replace(/\b(paguei|gastei|reservei|cofre|r\$|com|no|na)\b/gi, '')
                                      .trim();
                 
-                // Preservação de nomes compostos (ex: VT Lixeiro)
+                // Preservação de Nomes Compostos
                 descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1);
 
                 return res.status(200).json({
                     tipo: isReserva ? "reserva" : "financas",
-                    mensagem: `Registrado: R$ ${matchValor[1]} em ${descricao}.`,
+                    mensagem: `Feito, Stark. R$ ${matchValor[1]} com "${descricao}" registrado.`,
                     payload: { valor: parseFloat(valorLimpo), descricao }
                 });
             }
         }
 
-        // --- LÓGICA DE TAREFAS ---
+        // 3. REGISTRO DE TAREFAS
         if (isTarefa && !isConsulta) {
             let descTarefa = input.replace(/\b(fazer|tarefa|lembrar|anotar|marcar)\b/gi, '').trim();
             descTarefa = descTarefa.charAt(0).toUpperCase() + descTarefa.slice(1);
 
             return res.status(200).json({
                 tipo: "tarefa",
-                mensagem: `Tarefa anotada: ${descTarefa}. Pode deixar comigo.`,
+                mensagem: `Anotado. Vou te lembrar de: ${descTarefa}.`,
                 payload: { descricao: descTarefa }
             });
         }
 
-        // RESPOSTA PADRÃO / CONSULTA
+        // 4. CONSULTA
+        if (isConsulta) {
+            const alvo = isTarefa ? "tarefas" : (isReserva ? "reserva" : "financas");
+            return res.status(200).json({
+                tipo: "consulta",
+                mensagem: `Buscando dados de ${alvo} no servidor...`,
+                filtro: alvo
+            });
+        }
+
         return res.status(200).json({
-            tipo: isConsulta ? "consulta" : "conversa",
-            mensagem: isConsulta ? "Vou verificar seus registros agora..." : "Não entendi bem. Quer registrar um gasto ou uma tarefa?",
+            tipo: "conversa",
+            mensagem: "Sistemas online, Tony. Como posso ajudar?",
             payload: null
         });
 
