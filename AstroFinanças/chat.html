@@ -1,41 +1,79 @@
-// Localize a função enviarMensagem() e substitua o bloco 'consulta' por este:
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro Finanças - Chat</title>
+    <style>
+        :root { --primary: #00ff88; --bg: #0a0a0a; --card: #161616; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; h-100vh; }
+        #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 80%; padding: 12px 18px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
+        .user { align-self: flex-end; background: var(--primary); color: black; font-weight: 500; }
+        .astro { align-self: flex-start; background: var(--card); border: 1px solid #333; }
+        #input-area { padding: 20px; background: #111; display: flex; gap: 10px; border-top: 1px solid #222; }
+        input { flex: 1; background: #222; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; outline: none; }
+        button { background: var(--primary); border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
 
-} else if (analise.categoria === 'consulta') {
-    const tabela = (analise.tipo === 'tarefas') ? 'tarefas' : 'financas';
-    
-    // Busca TODOS os dados do usuário para filtrar no Front-end (mais preciso com Timezone)
-    const { data, error } = await meuSupabase.from(tabela).select('*').eq('cliente_id', idUsuario);
-    
-    if (error) { console.error(error); return; }
+    <div id="chat-container">
+        <div class="msg astro">Olá, Tony Stark. Como posso ajudar com suas finanças ou tarefas hoje?</div>
+    </div>
 
-    const f = obterFiltrosTemporais(analise.periodo);
-    
-    let filtrados = data ? data.filter(item => {
-        // Valida se o tipo (entrada/saida) bate com a consulta
-        if (tabela === 'financas' && item.tipo !== analise.tipo) return false;
-        
-        // Valida o tempo (converte created_at para o dia local do Tony)
-        const dataItem = new Date(item.created_at).getTime();
-        if (analise.periodo === 'tudo') return true;
-        return dataItem >= f.inicio && dataItem <= f.fim;
-    }) : [];
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="Ex: Gastei 50,00 com VT Lixeiro...">
+        <button onclick="sendMessage()">Enviar</button>
+    </div>
 
-    if (filtrados.length > 0) {
-        let r = `Aqui está o que encontrei para ${analise.periodo}:\n\n`;
-        let total = 0;
-        filtrados.forEach(i => {
-            const dataObjeto = new Date(i.created_at);
-            const dF = dataObjeto.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-            if (tabela === 'financas') {
-                total += i.valor;
-                r += `📅 ${dF} - R$ ${i.valor.toFixed(2)} (${i.descricao})\n`;
-            } else {
-                r += `• ${i.descricao}\n`;
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('userInput');
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // Adiciona balão do usuário
+            appendMessage(text, 'user');
+            userInput.value = '';
+
+            try {
+                // Chamada para a Serverless Function no Vercel
+                const response = await fetch('/api/cerebro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, userId: 'stark_01' })
+                });
+
+                const data = await response.json();
+                
+                // Lógica de Resposta do Astro
+                appendMessage(data.mensagem, 'astro');
+
+                // Se houver payload de consulta, aqui você chamaria a renderização de tabelas
+                if(data.tipo === 'consulta') {
+                    console.log("Iniciando busca no banco para:", data.filtro);
+                }
+
+            } catch (err) {
+                appendMessage("Erro na conexão com o Cérebro. Verifique os logs.", "astro");
+                console.error(err);
             }
+        }
+
+        function appendMessage(text, side) {
+            const div = document.createElement('div');
+            div.className = `msg ${side}`;
+            div.innerText = text;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
         });
-        if (tabela === 'financas') r += `\n💰 TOTAL: R$ ${total.toFixed(2)}`;
-        adicionarMensagem(r, 'bot');
-    } else {
-        adicionarMensagem(`Nada encontrado para "${analise.periodo}". 😎`, 'bot');
-    }
-}
+    </script>
+</body>
+</html>
